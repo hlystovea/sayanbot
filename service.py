@@ -15,7 +15,7 @@ def text_message(message): #ответ на текстовое сообщени�
 
 
 def weather_yandex():
-	yandex_token = os.environ.get(YA_TOKEN)
+	yandex_token = os.environ.get('YA_TOKEN')
 	url = 'https://api.weather.yandex.ru/v2/forecast/'
 
 	header = {
