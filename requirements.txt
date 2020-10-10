@@ -1,0 +1,6 @@
+pyTelegramBotAPI==3.7.3
+python-jsonrpc-server==0.4.0
+requests==2.24.0
+ujson==3.2.0
+urllib3==1.25.10
+
