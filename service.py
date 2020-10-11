@@ -1,58 +1,35 @@
 import requests
 import json
 import os
-from text_db import text_db, phone_msg
 
-def text_message(message): #ответ на текстовое сообщение
-    keys = text_db.keys()
-    n = 0
-    for key in keys: #поиск совпадений в словаре
-        if key in message.text.lower():
-            n+=1
-            return text_db[key] #ответ
-    if n == 0:
-        return 'Извини. Я в ответах ограничен. Правильно задавай вопросы.'
-
-
-def weather_yandex():
+def weather():
 	yandex_token = os.environ.get('YA_TOKEN')
-	url = 'https://api.weather.yandex.ru/v2/forecast/'
+	open_token = os.environ.get('OP_TOKEN')
+	url_ya = 'https://api.weather.yandex.ru/v2/forecast/'
+	url_op = 'https://api.openweathermap.org/data/2.5/weather/'
 
-	header = {
+	header_ya = {
     	'X-Yandex-API-Key': yandex_token,
 		}
-	
+
+	param_op = {
+		'lat': '52.916296', 
+		'lon': '91.351843',
+		'appid': open_token,
+		'units': 'metric',
+		'lang': 'ru',
+    }
+
 	# координаты мест для вывода погоды
-	coord_1 = {
-    	'lat': '52.917383', 
-    	'lon': '91.352284',
-    	'lang': 'ru_RU',
-    	'limit': '1',
-    	'extra': 'true',
-    	'hours': 'false',
+	places = {
+    	'name': ['Гладенькая', 'Ергаки', 'Черемушки'],
+		'lat': ['52.917383', '52.837717', '52.853902'],
+    	'lon': ['91.352284', '93.255870', '91.408986'],
     }
 
-	coord_2 = {
-    	'lat': '52.837717', 
-    	'lon': '93.255870',
-    	'lang': 'ru_RU',
-    	'limit': '1',
-    	'extra': 'true',
-    	'hours': 'false',
-    }
+	quan = len(places['name']) # определяет количество запросов о погоде
 
-	coord_3 = {
-		'lat': '52.853902', 
-    	'lon': '91.408986',
-    	'lang': 'ru_RU',
-    	'limit': '1',
-    	'extra': 'true',
-    	'hours': 'false',
-	}
-
-	places = ['Гладенькая', 'Ергаки', 'Черемушки'] # названия мест
-	coordinates = [coord_1, coord_2, coord_3] # последовательность координат
-	
+	# расшифровка осадков для яндекс погоды
 	condition = {
 		'clear': 'ясно',
 		'partly-cloudy': 'малооблачно',
@@ -75,17 +52,22 @@ def weather_yandex():
 		'thunderstorm-with-hail': 'гроза с градом',
 	}
 
-	if len(places) <= len(coordinates): # защита от короткого списка
-		quan = len(places)
-	else:
-		quan = len(coordinates)
+	list_weather_ya = f'Текущая погода по версии Яндекса:\n'
+	list_weather_op = f'Текущая погода по версии Openweather:\n'
 
-	list_weather = f'Текущая погода по версии Яндекса:\n'
-
-	response = requests.get(url, headers=header)
-	if response.status_code == 200: # проверяет доступность сервера погоды
+	response_ya = requests.get(url_ya, headers=header_ya)
+	response_op = requests.get(url_op, params=param_op)
+	if response_ya.status_code == 200: # проверяет доступность сервера погоды
 		for i in range(0, quan): # перебирает места и формирует список погоды
-			response = requests.get(url, headers=header, params=coordinates[i])
+			param_ya = {
+				'lat': places['lat'][i], 
+				'lon': places['lon'][i],
+				'lang': 'ru_RU',
+				'limit': '1',
+				'extra': 'true',
+				'hours': 'false',
+			}
+			response = requests.get(url_ya, headers=header_ya, params=param_ya)
 			weather = json.loads(response.text)
 			fact_temp = weather['fact']['temp']
 			fact_cond = weather['fact']['condition']
@@ -94,13 +76,34 @@ def weather_yandex():
 			sn = '+'
 			if fact_temp <= 0: # знак перед значением температуры
 				sn = ''
-
-			fact_weather = f'{places[i]}: {sn}{fact_temp} \xb0С, {fact_wind} м/с, {condition[fact_cond]}.\n'
-			list_weather = list_weather + fact_weather
-		
-		return list_weather
+			
+			place = places['name'][i]
+			fact_weather = f'{place}: {sn}{fact_temp} \xb0С, {fact_wind} м/с, {condition[fact_cond]}.\n'
+			list_weather_ya = list_weather_ya + fact_weather
+		return list_weather_ya
+	elif response_op.status_code == 200: # проверяет доступность сервера погоды
+		for i in range(0, quan): # перебирает места и формирует список погоды
+			param_op = {
+				'lat': places['lat'][i], 
+				'lon': places['lon'][i],
+				'appid': open_token,
+				'units': 'metric',
+				'lang': 'ru',
+			}
+			response = requests.get(url_op, params=param_op)
+			weather = json.loads(response.text)
+			fact_temp = weather['main']['temp']
+			fact_cond = weather['weather'][0]['description']
+			fact_wind = weather['wind']['speed']
+			
+			sn = '+'
+			if fact_temp <= 0: # знак перед значением температуры
+				sn = ''
+			
+			place = places['name'][i]
+			fact_weather = f'{place}: {sn}{fact_temp} \xb0С, {fact_wind} м/с, {fact_cond}.\n'
+			list_weather_op = list_weather_op + fact_weather
+		return list_weather_op
 	else:
 		return f'Проблемы со связью. Попробуйте немного позже.'
 
-def phone():
-    return phone_msg
