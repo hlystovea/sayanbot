@@ -2,18 +2,16 @@ import telebot
 import json
 import requests
 import os
-from text_db import (start_msg, help_msg, phone_msg, radio_msg)
+from text_db import (start_msg, help_msg, phone_msg, radio_msg, links_msg)
 from titles import (bot_names, weather_title, phone_book)
 from service import weather
 
 token = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(token)
 
-
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(message.chat.id, start_msg)
-
 
 @bot.message_handler(commands=['help'])
 def help_message(message):
@@ -27,9 +25,13 @@ def weather_message(message):
 def phone_message(message):
     bot.send_message(message.chat.id, phone_msg)
 
-@bot.message_handler(commands=['radio'])
+@bot.message_handler(commands=['radio', 'частота'])
 def radio_message(message):
     bot.send_message(message.chat.id, radio_msg)
+
+@bot.message_handler(commands=['links', 'ссылки'])
+def radio_message(message):
+    bot.send_message(message.chat.id, links_msg)
 
 @bot.message_handler(content_types=['text'])
 def text_waiting(message):  # функция определяет реакцию бота на сообщения
