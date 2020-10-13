@@ -52,7 +52,7 @@ def weather():
 		'thunderstorm-with-hail': 'гроза с градом',
 	}
 
-	list_weather_ya = f'По данным Яндекс.Погода https://clck.ru/RLevU сейчас:\n'
+	list_weather_ya = f'По данным Яндекс.Погода сейчас: https://clck.ru/RMoit\n'
 	list_weather_op = f'По данным Openweather сейчас:\n'
 
 	response_ya = requests.get(url_ya, headers=header_ya)
