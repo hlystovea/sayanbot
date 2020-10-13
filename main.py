@@ -35,7 +35,6 @@ def radio_message(message):
 
 @bot.message_handler(content_types=['text'])
 def text_waiting(message):  # функция определяет реакцию бота на сообщения
-    print(message)
     split_message = message.text.split()
     name = split_message[0]
     if name.lower() in bot_names:  # ждёт обращения к боту
