@@ -31,7 +31,7 @@ def radio_message(message):
 
 @bot.message_handler(commands=['links', 'ссылки'])
 def radio_message(message):
-    bot.send_message(message.chat.id, links_msg)
+    bot.send_message(message.chat.id, links_msg, disable_web_page_preview:True)
 
 @bot.message_handler(content_types=['text'])
 def text_waiting(message):  # функция определяет реакцию бота на сообщения
