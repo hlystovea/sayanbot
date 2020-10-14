@@ -19,7 +19,7 @@ def help_message(message):
 
 @bot.message_handler(commands=['weather'])
 def weather_message(message):
-    bot.send_message(message.chat.id, weather())
+    bot.send_message(message.chat.id, weather(), parse_mode='Markdown', disable_web_page_preview=True)
 
 @bot.message_handler(commands=['phone'])
 def phone_message(message):
