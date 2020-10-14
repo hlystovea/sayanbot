@@ -52,8 +52,8 @@ def weather():
 		'thunderstorm-with-hail': 'гроза с градом',
 	}
 
-	list_weather_ya = f'По данным "Яндекс.Погода" сейчас: https://clck.ru/RMoit\n'
-	list_weather_op = f'По данным "Openweather" сейчас:\n'
+	list_weather_ya = f'По данным ["Яндекс.Погода"](https://clck.ru/RMoit) сейчас:\n'
+	list_weather_op = f'По данным "OpenWeather" сейчас:\n'
 
 	response_ya = requests.get(url_ya, headers=header_ya)
 	response_op = requests.get(url_op, params=param_op)
@@ -78,7 +78,7 @@ def weather():
 				sn = ''
 			
 			place = places['name'][i]
-			fact_weather = f'{place}: {sn}{fact_temp} \xb0С, {fact_wind} м/с, {condition[fact_cond]}.\n'
+			fact_weather = f'*{place}*: {sn}{fact_temp} \xb0С, {fact_wind} м/с, {condition[fact_cond]}.\n'
 			list_weather_ya = list_weather_ya + fact_weather
 		return list_weather_ya
 	elif response_op.status_code == 200: # проверяет доступность сервера погоды
