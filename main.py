@@ -2,22 +2,20 @@ import telebot
 import json
 import requests
 import os
-from text_db import (start_msg, help_msg, phone_msg, radio_msg, links_msg)
+from text_db import (start_msg, phone_msg, links_msg)
 from titles import (bot_names, weather_title, phone_book)
 from service import weather
 
 token = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(token)
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start', 'help'])
 def start_message(message):
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton(text='Погода на склоне', callback_data='weather'))
+    markup.add(telebot.types.InlineKeyboardButton(text='Телефоны горнолыжных курортов и баз', callback_data='phones'))
+    markup.add(telebot.types.InlineKeyboardButton(text='Сайты горнолыжных курортов и баз', callback_data='links'))
     bot.send_message(message.chat.id, start_msg, reply_markup=markup)
-
-@bot.message_handler(commands=['help'])
-def help_message(message):
-    bot.send_message(message.chat.id, help_msg)
 
 @bot.callback_query_handler(func=lambda call: True)
 def query_handler(call):
@@ -25,6 +23,10 @@ def query_handler(call):
     answer = ''
     if call.data == 'weather':
         answer = weather()
+    elif call.data == 'phones':
+        answer = phone_msg
+    elif call.data == 'links':
+        answer = links_msg
     else:
         answer = f'Неисзвестный запрос'
     bot.send_message(call.message.chat.id, answer, parse_mode='Markdown', disable_web_page_preview=True)    
@@ -33,13 +35,9 @@ def query_handler(call):
 def weather_message(message):
     bot.send_message(message.chat.id, weather(), parse_mode='Markdown', disable_web_page_preview=True)
 
-@bot.message_handler(commands=['phone'])
+@bot.message_handler(commands=['phones', 'phone'])
 def phone_message(message):
     bot.send_message(message.chat.id, phone_msg)
-
-@bot.message_handler(commands=['radio', 'частота'])
-def radio_message(message):
-    bot.send_message(message.chat.id, radio_msg)
 
 @bot.message_handler(commands=['links', 'ссылки'])
 def radio_message(message):
@@ -59,8 +57,6 @@ def text_waiting(message):  # функция определяет реакцию
                 bot.send_message(message.chat.id, weather())
             elif command.lower() in phone_book:  # ищет упоминание тел.книги
                 bot.send_message(message.chat.id, phone_msg)
-            elif command.lower() == 'рация' or command.lower() == 'частота':
-                bot.send_message(message.chat.id, radio_msg)
             else:  # если известных команд не найдено, отвечает по шаблону
                 bot.send_message(message.chat.id, f'Извини. Я в ответах ограничен. Правильно задавай вопросы.')
 
