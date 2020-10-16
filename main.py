@@ -27,7 +27,7 @@ def query_handler(call):
         answer = weather()
     else:
         answer = f'Неисзвестный запрос'
-    bot.send_message(message.chat.id, answer, parse_mode='Markdown', disable_web_page_preview=True)    
+    bot.send_message(call.message.chat.id, answer, parse_mode='Markdown', disable_web_page_preview=True)    
         
 @bot.message_handler(commands=['weather'])
 def weather_message(message):
