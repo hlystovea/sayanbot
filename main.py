@@ -11,12 +11,24 @@ bot = telebot.TeleBot(token)
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.send_message(message.chat.id, start_msg)
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton(text='Погода на склоне', callback_data='weather'))
+    bot.send_message(message.chat.id, start_msg, reply_markup=markup)
 
 @bot.message_handler(commands=['help'])
 def help_message(message):
     bot.send_message(message.chat.id, help_msg)
 
+@bot.callback_query_handler(func=lambda call: True)
+def query_handler(call):
+    bot.answer_callback_query(callback_query_id=call.id, text='Смотрю на сервере..')
+    answer = ''
+    if call.data == 'weather':
+        answer = weather()
+    else:
+        answer = f'Неисзвестный запрос'
+    bot.send_message(message.chat.id, answer, parse_mode='Markdown', disable_web_page_preview=True)    
+        
 @bot.message_handler(commands=['weather'])
 def weather_message(message):
     bot.send_message(message.chat.id, weather(), parse_mode='Markdown', disable_web_page_preview=True)
