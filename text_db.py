@@ -11,3 +11,5 @@ links_msg = (f'Гладенькая: http://ski-gladenkaya.ru\n'
             f'База Ергаки: http://ergaki.com/\n'
             f'Тушканчик Кэмп: https://tushkanchik.camp/\n'
             f'Приисковый: https://priiskovy.ru/')
+
+webcam_msg = (f'Гладенькая: http://ski-gladenkaya.ru/ski/webcam.html')
