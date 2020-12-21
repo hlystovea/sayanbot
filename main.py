@@ -3,7 +3,7 @@ import os
 import telebot
 
 from text_db import start_msg, phone_msg, links_msg, webcam_msg
-from service import weather
+from service import weather, gis_weather, ya_weather, op_weather, places
 
 token = os.environ.get('SAYAN_TOKEN')
 bot = telebot.TeleBot(token)
