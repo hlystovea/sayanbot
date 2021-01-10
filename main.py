@@ -12,7 +12,7 @@ from text_db import phone_msg, links_msg, webcam_msg
 token = os.environ.get('SAYAN_TOKEN')
 bot = telebot.TeleBot(token)
 
-main_kbrd = ReplyKeyboardMarkup(True, selective=True)
+main_kbrd = ReplyKeyboardMarkup(True, True)
 main_kbrd.row('Показать список команд')
 
 buttons = {
