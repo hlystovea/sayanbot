@@ -1,26 +1,53 @@
 import os
 
 import telebot
+from telebot.types import (InlineKeyboardButton,
+                           InlineKeyboardMarkup,
+                           ReplyKeyboardMarkup,)
 
-from text_db import start_msg, phone_msg, links_msg, webcam_msg
-from service import weather, gis_weather, ya_weather, op_weather, places
+
+from service import locations, weather
+from text_db import phone_msg, links_msg, webcam_msg
 
 token = os.environ.get('SAYAN_TOKEN')
 bot = telebot.TeleBot(token)
 
+main_kbrd = ReplyKeyboardMarkup(True, selective=True)
+main_kbrd.row('Показать список команд')
+
+buttons = {
+    1: ('Погода на склоне', 'weather'),
+    2: ('Телефоны горнолыжных курортов', 'phones'),
+    3: ('Сайты горнолыжных курортов', 'links'),
+    4: ('Как проехать', 'location'),
+    5: ('Веб-камеры', 'webcam'),
+}
+
 
 @bot.message_handler(commands=['start', 'help'])
-def start_message(message):
-    markup = telebot.types.InlineKeyboardMarkup()
-    markup.add(telebot.types.InlineKeyboardButton
-    (text='Погода на склоне', callback_data='weather'))
-    markup.add(telebot.types.InlineKeyboardButton
-    (text='Телефоны горнолыжных курортов и баз', callback_data='phones'))
-    markup.add(telebot.types.InlineKeyboardButton
-    (text='Сайты горнолыжных курортов и баз', callback_data='links'))
-    markup.add(telebot.types.InlineKeyboardButton
-    (text='Веб-камеры горнолыжных курортов', callback_data='webcam'))
-    bot.send_message(message.chat.id, start_msg, reply_markup=markup)
+def start(message):
+    text = ('Привет! Я бот, который поможет тебе найти информацию '
+            'о горнолыжных курортах юга Сибири. Чтобы начать, нажмите '
+            '*"Показать список команд"*')
+    bot.send_message(
+        message.chat.id,
+        text,
+        reply_markup=main_kbrd,
+        parse_mode='Markdown',)
+
+
+@bot.message_handler(content_types=['text'])
+def list_commands(message):
+    keyboard = InlineKeyboardMarkup()
+    for b in sorted(buttons):
+        button = InlineKeyboardButton(
+            buttons[b][0],
+            callback_data=buttons[b][1])
+        keyboard.add(button)
+    text = 'Выберите команду:'
+    if message.text.lower() == 'показать список команд':
+        bot.delete_message(message.chat.id, message.message_id)
+        bot.send_message(message.chat.id, text, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -29,56 +56,38 @@ def query_handler(call):
         callback_query_id=call.id,
         text='Смотрю на сервере..'
         )
-    answer = ''
     if call.data == 'weather':
-        answer = weather()
-    elif call.data == 'phones':
-        answer = phone_msg
-    elif call.data == 'links':
-        answer = links_msg
-    elif call.data == 'webcam':
-        answer = webcam_msg
+        text = weather()
+        bot.send_message(
+            call.message.chat.id,
+            text, parse_mode='Markdown',
+            disable_web_page_preview=True
+        )
+    elif call.data == 'location':
+        keyboard = InlineKeyboardMarkup()
+        for name in locations:
+            button = InlineKeyboardButton(name, callback_data=f'i_find {name}')
+            keyboard.add(button)
+        text = 'Выберите место:'
+        bot.send_message(call.message.chat.id, text, reply_markup=keyboard)
+    elif 'i_find' in call.data:
+        name = call.data.split()[1]
+        loc = locations[name][0]
+        lat = locations[name][1]
+        bot.send_location(call.message.chat.id, loc, lat)
     else:
-        answer = 'Неисзвестный запрос'
-    bot.send_message(
-        call.message.chat.id,
-        answer,
-        parse_mode='Markdown',
-        disable_web_page_preview=True
+        answer = {
+            'phones': phone_msg,
+            'links': links_msg,
+            'webcam': webcam_msg,
+        }
+        text = answer.get(call.data, 'Неисзвестный запрос')
+        bot.send_message(
+            call.message.chat.id,
+            text,
+            disable_web_page_preview=True,
         )
-
-
-@bot.message_handler(commands=['weather', 'погода'])
-def weather_message(message):
-    bot.send_message(
-        message.chat.id,
-        weather(),
-        parse_mode='Markdown',
-        disable_web_page_preview=True
-        )
-
-
-@bot.message_handler(commands=['phones', 'phone', 'телефоны'])
-def phone_message(message):
-    bot.send_message(message.chat.id, phone_msg)
-
-
-@bot.message_handler(commands=['links', 'ссылки'])
-def links_message(message):
-    bot.send_message(
-        message.chat.id,
-        links_msg,
-        disable_web_page_preview=True
-        )
-
-
-@bot.message_handler(commands=['webcam', 'вебкамеры'])
-def webcam_message(message):
-    bot.send_message(
-        message.chat.id,
-        webcam_msg,
-        disable_web_page_preview=True
-        )
+    bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 bot.polling()
