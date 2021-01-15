@@ -33,7 +33,9 @@ def start(message):
         message.chat.id,
         text,
         reply_markup=main_kbrd,
-        parse_mode='Markdown',)
+        parse_mode='Markdown',
+        disable_notification=True,
+    )
 
 
 @bot.message_handler(content_types=['text'])
@@ -47,7 +49,12 @@ def list_commands(message):
     text = 'Выберите команду:'
     if message.text.lower() == 'показать список команд':
         bot.delete_message(message.chat.id, message.message_id)
-        bot.send_message(message.chat.id, text, reply_markup=keyboard)
+        bot.send_message(
+            message.chat.id,
+            text,
+            reply_markup=keyboard,
+            disable_notification=True,
+        )
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -61,7 +68,8 @@ def query_handler(call):
         bot.send_message(
             call.message.chat.id,
             text, parse_mode='Markdown',
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            disable_notification=True,
         )
     elif call.data == 'location':
         keyboard = InlineKeyboardMarkup()
@@ -69,12 +77,22 @@ def query_handler(call):
             button = InlineKeyboardButton(name, callback_data=f'i_find {name}')
             keyboard.add(button)
         text = 'Выберите место:'
-        bot.send_message(call.message.chat.id, text, reply_markup=keyboard)
+        bot.send_message(
+            call.message.chat.id,
+            text,
+            reply_markup=keyboard,
+            disable_notification=True,
+        )
     elif 'i_find' in call.data:
         name = call.data.split()[1]
         loc = locations[name][0]
         lat = locations[name][1]
-        bot.send_location(call.message.chat.id, loc, lat)
+        bot.send_location(
+            call.message.chat.id,
+            loc,
+            lat,
+            disable_notification=True,
+        )
     else:
         answer = {
             'phones': phone_msg,
@@ -86,6 +104,7 @@ def query_handler(call):
             call.message.chat.id,
             text,
             disable_web_page_preview=True,
+            disable_notification=True,
         )
     bot.delete_message(call.message.chat.id, call.message.message_id)
 
