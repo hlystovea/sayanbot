@@ -5,22 +5,22 @@ from telebot.types import (InlineKeyboardButton,
                            InlineKeyboardMarkup,
                            ReplyKeyboardMarkup,)
 
-
 from service import locations, weather
-from text_db import phone_msg, links_msg, webcam_msg
+from text_db import webcam_msg
+
 
 token = os.environ.get('SAYAN_TOKEN')
 bot = telebot.TeleBot(token)
+
 
 main_kbrd = ReplyKeyboardMarkup(True, True)
 main_kbrd.row('Показать список команд')
 
 buttons = {
     1: ('Погода на склоне', 'weather'),
-    2: ('Телефоны горнолыжных курортов', 'phones'),
-    3: ('Сайты горнолыжных курортов', 'links'),
-    4: ('Как проехать', 'location'),
-    5: ('Веб-камеры', 'webcam'),
+    2: ('Информация', 'info'),
+    3: ('Как проехать', 'location'),
+    4: ('Веб-камеры', 'webcam'),
 }
 
 
@@ -71,10 +71,13 @@ def query_handler(call):
             disable_web_page_preview=True,
             disable_notification=True,
         )
-    elif call.data == 'location':
+    elif call.data == 'location' or call.data == 'info':
         keyboard = InlineKeyboardMarkup()
         for name in locations:
-            button = InlineKeyboardButton(name, callback_data=f'i_find {name}')
+            button = InlineKeyboardButton(
+                name,
+                callback_data=f'get_{call.data}&{name}',
+            )
             keyboard.add(button)
         text = 'Выберите место:'
         bot.send_message(
@@ -83,23 +86,38 @@ def query_handler(call):
             reply_markup=keyboard,
             disable_notification=True,
         )
-    elif 'i_find' in call.data:
-        name = call.data.split()[1]
-        loc = locations[name][0]
-        lat = locations[name][1]
+    elif 'get_location' in call.data:
+        name = call.data.split('&')[1]
+        loc = locations[name][0][0]
+        lat = locations[name][0][1]
+        text = f'{name}:'
+        bot.send_message(
+            call.message.chat.id,
+            text,
+            disable_notification=True,
+        )
         bot.send_location(
             call.message.chat.id,
             loc,
             lat,
             disable_notification=True,
         )
+    elif 'get_info' in call.data:
+        name = call.data.split('&')[1]
+        phone = locations[name][1]
+        url = locations[name][2]
+        text = f'{name}:\nТелефон: {phone}\nСайт: {url}'
+        bot.send_message(
+            call.message.chat.id,
+            text,
+            disable_web_page_preview=True,
+            disable_notification=True,
+        )
     else:
         answer = {
-            'phones': phone_msg,
-            'links': links_msg,
             'webcam': webcam_msg,
         }
-        text = answer.get(call.data, 'Неисзвестный запрос')
+        text = answer.get(call.data, 'Неизвестный запрос')
         bot.send_message(
             call.message.chat.id,
             text,

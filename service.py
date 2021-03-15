@@ -3,12 +3,56 @@ import json
 import os
 
 locations = {
-	'Гладенькая': (52.927255, 91.361045),
-	'Ергаки': (52.837717, 93.255870),
-	'Черемушки': (52.853902, 91.408986),
-	'Приисковый': (54.652993, 88.703671),
-	'Шерегеш': (52.947942, 87.932612),
-	'Оленья подкова': (54.345838, 93.250253),
+	'ГК "Гладенькая"': (
+		(52.927255, 91.361045),
+		'+79233933300',
+		'http://ski-gladenkaya.ru',
+	),
+	'ГК "Черёмуховый лог"': (
+		(52.853902, 91.408986),
+		'+73904231216',
+		'http://info-borus.ru/ski/',
+	),
+	'База "Ергаки"': (
+		(52.837717, 93.255870),
+		'88007076270',
+		'http://ergaki.com/',
+	),
+	'База "Снежная"': (
+		(52.799549, 93.268188),
+		'+79083272930',
+		'https://snow611.ru/',
+	),
+	'Пик Звёздный': (
+		(52.829201, 93.300938),
+		'+79503040055',
+		'',
+	),
+	'Тушканчик кэмп': (
+		(52.803941, 93.247428),
+		'88005003448',
+		'https://tushkanchik.camp/',
+	),
+	'Приисковый': (
+		(54.652993, 88.703671),
+		'88005003449',
+		'https://priiskovy.ru/',
+	),
+	'Шерегеш': (
+		(52.947942, 87.932612),
+		'',
+		'https://gesh.ru/',
+	),
+	'Оленья подкова': (
+		(54.345838, 93.250253),
+		'+79024688352',
+		'https://vk.com/gora_korona/',
+	),
+	'Сюгеш': (
+		(52.717182, 89.918972),
+		'+79833779577',
+		'https://sugesh.ru/',
+	),
 }
 
 
@@ -30,8 +74,8 @@ def gis_weather():
 		for name in locations:
 			params = {
 				'lang': 'ru',
-				'latitude': locations[name][0],
-				'longitude': locations[name][1],
+				'latitude': locations[name][0][0],
+				'longitude': locations[name][0][1],
 			}
 
 			r = requests.get(url, headers=headers, params=params)
@@ -85,8 +129,8 @@ def ya_weather():
 	if r.status_code == 200:
 		for name in locations:
 			params = {
-				'lat': locations[name][0],
-				'lon': locations[name][1],
+				'lat': locations[name][0][0],
+				'lon': locations[name][0][1],
 				'lang': 'ru_RU',
 				'limit': '1',
 				'extra': 'true',
@@ -120,8 +164,8 @@ def op_weather():
 	if r.status_code == 200:
 		for name in locations:
 			params = {
-				'lat': locations[name][0],
-				'lon': locations[name][1],
+				'lat': locations[name][0][0],
+				'lon': locations[name][0][1],
 				'appid': token,
 				'units': 'metric',
 				'lang': 'ru',
