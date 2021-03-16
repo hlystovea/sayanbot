@@ -1,12 +1,12 @@
 import os
 
 import telebot
+from telebot.apihelper import ApiTelegramException
 from telebot.types import (InlineKeyboardButton,
-                           InlineKeyboardMarkup,
-                           ReplyKeyboardMarkup,)
+                           InlineKeyboardMarkup, ReplyKeyboardMarkup,)
 
-from service import locations, weather
 from text_db import webcam_msg
+from utils import places, trail_maps, weather
 
 
 token = os.environ.get('SAYAN_TOKEN')
@@ -18,9 +18,10 @@ main_kbrd.row('Показать список команд')
 
 buttons = {
     1: ('Погода на склоне', 'weather'),
-    2: ('Информация', 'info'),
-    3: ('Как проехать', 'location'),
-    4: ('Веб-камеры', 'webcam'),
+    2: ('Как проехать', 'location'),
+    3: ('Информация', 'info'),
+    4: ('Карта склонов', 'trail_maps'),
+    5: ('Веб-камеры', 'webcam'),
 }
 
 
@@ -63,17 +64,24 @@ def query_handler(call):
         callback_query_id=call.id,
         text='Смотрю на сервере..'
         )
-    if call.data == 'weather':
-        text = weather()
+    if call.data == 'trail_maps':
+        keyboard = InlineKeyboardMarkup()
+        for name in trail_maps:
+            button = InlineKeyboardButton(
+                name,
+                callback_data=f'get_trail&{name}',
+            )
+            keyboard.add(button)
+        text = 'Выберите место:'
         bot.send_message(
             call.message.chat.id,
-            text, parse_mode='Markdown',
-            disable_web_page_preview=True,
+            text,
+            reply_markup=keyboard,
             disable_notification=True,
-        )
-    elif call.data == 'location' or call.data == 'info':
+        )     
+    elif call.data == 'location' or call.data == 'info' or call.data == 'weather':
         keyboard = InlineKeyboardMarkup()
-        for name in locations:
+        for name in places:
             button = InlineKeyboardButton(
                 name,
                 callback_data=f'get_{call.data}&{name}',
@@ -86,26 +94,35 @@ def query_handler(call):
             reply_markup=keyboard,
             disable_notification=True,
         )
-    elif 'get_location' in call.data:
+    elif 'weather' in call.data:
         name = call.data.split('&')[1]
-        loc = locations[name][0][0]
-        lat = locations[name][0][1]
-        text = f'{name}:'
+        coordinates = places[name][0]
+        text = weather(coordinates)
         bot.send_message(
             call.message.chat.id,
             text,
+            parse_mode='Markdown',
+            disable_web_page_preview=True,
             disable_notification=True,
         )
-        bot.send_location(
+    elif 'get_location' in call.data:
+        name = call.data.split('&')[1]
+        lat = places[name][0][0]
+        lon = places[name][0][1]
+        title = name
+        address = f'{lat}, {lon}'
+        bot.send_venue(
             call.message.chat.id,
-            loc,
             lat,
+            lon,
+            title,
+            address,
             disable_notification=True,
         )
     elif 'get_info' in call.data:
         name = call.data.split('&')[1]
-        phone = locations[name][1]
-        url = locations[name][2]
+        phone = places[name][1]
+        url = places[name][2]
         text = f'{name}:\nТелефон: {phone}\nСайт: {url}'
         bot.send_message(
             call.message.chat.id,
@@ -113,6 +130,24 @@ def query_handler(call):
             disable_web_page_preview=True,
             disable_notification=True,
         )
+    elif 'get_trail' in call.data:
+        name = call.data.split('&')[1]
+        text = f'{name}'
+        try:
+            with open(f'trail_maps/{trail_maps[name]}', 'rb') as file:
+                bot.send_photo(
+                    call.message.chat.id,
+                    photo=file,
+                    caption=text,
+                    disable_notification=True,
+                )
+        except FileNotFoundError as e:
+            print(repr(e))
+            bot.send_message(
+                call.message.chat.id,
+                'Упс.. что-то пошло не так',
+                disable_notification=True,
+            )
     else:
         answer = {
             'webcam': webcam_msg,
@@ -124,7 +159,10 @@ def query_handler(call):
             disable_web_page_preview=True,
             disable_notification=True,
         )
-    bot.delete_message(call.message.chat.id, call.message.message_id)
+    try:
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    except ApiTelegramException as e:
+        print(repr(e))
 
 
 bot.polling()
