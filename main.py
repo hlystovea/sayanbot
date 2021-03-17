@@ -13,7 +13,7 @@ token = os.environ.get('SAYAN_TOKEN')
 bot = telebot.TeleBot(token)
 
 
-main_kbrd = ReplyKeyboardMarkup(True, True)
+main_kbrd = ReplyKeyboardMarkup(True)
 main_kbrd.row('Показать список команд')
 
 buttons = {
@@ -96,7 +96,7 @@ def query_handler(call):
         )
     elif 'weather' in call.data:
         name = call.data.split('&')[1]
-        coordinates = places[name][0]
+        coordinates = places[name]['coordinates']
         text = weather(coordinates)
         bot.send_message(
             call.message.chat.id,
@@ -107,8 +107,8 @@ def query_handler(call):
         )
     elif 'get_location' in call.data:
         name = call.data.split('&')[1]
-        lat = places[name][0][0]
-        lon = places[name][0][1]
+        lat = places[name]['coordinates'][0]
+        lon = places[name]['coordinates'][1]
         title = name
         address = f'{lat}, {lon}'
         bot.send_venue(
@@ -121,12 +121,22 @@ def query_handler(call):
         )
     elif 'get_info' in call.data:
         name = call.data.split('&')[1]
-        phone = places[name][1]
-        url = places[name][2]
-        text = f'{name}:\nТелефон: {phone}\nСайт: {url}'
+        text = (
+            f"*{name}\n*"
+            f"Телефон: {places[name]['phone']}\n"
+            f"Сайт: {places[name]['url']}\n"
+            f"Количество трасс: {places[name]['info']['trails']}\n"
+            f"Самая длинная трасса: {places[name]['info']['max_length']} км\n"
+            f"Общая протяженность трасс: {places[name]['info']['total_length']} км\n"
+            f"Перепад высот: {places[name]['info']['vertical_drop']} м\n"
+            f"Максимальная высота: {places[name]['info']['max_elevation']} м\n"
+            f"Количество подъемников: {places[name]['info']['lifts']}\n"
+            f"Тип подъемников: {places[name]['info']['type_lift']}\n"
+        )
         bot.send_message(
             call.message.chat.id,
             text,
+            parse_mode='Markdown',
             disable_web_page_preview=True,
             disable_notification=True,
         )
