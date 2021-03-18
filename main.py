@@ -5,8 +5,8 @@ from telebot.apihelper import ApiTelegramException
 from telebot.types import (InlineKeyboardButton,
                            InlineKeyboardMarkup, ReplyKeyboardMarkup,)
 
-from text_db import webcam_msg
-from utils import places, trail_maps, weather
+from db import places
+from utils import weather
 
 
 token = os.environ.get('SAYAN_TOKEN')
@@ -66,12 +66,13 @@ def query_handler(call):
         )
     if call.data == 'trail_maps':
         keyboard = InlineKeyboardMarkup()
-        for name in trail_maps:
-            button = InlineKeyboardButton(
-                name,
-                callback_data=f'get_trail&{name}',
-            )
-            keyboard.add(button)
+        for name in places:
+            if not places[name]['trail_map'] is None:
+                button = InlineKeyboardButton(
+                    name,
+                    callback_data=f'get_trail&{name}',
+                )
+                keyboard.add(button)
         text = 'Выберите место:'
         bot.send_message(
             call.message.chat.id,
@@ -98,6 +99,17 @@ def query_handler(call):
         name = call.data.split('&')[1]
         coordinates = places[name]['coordinates']
         text = weather(coordinates)
+        bot.send_message(
+            call.message.chat.id,
+            text,
+            disable_web_page_preview=True,
+            disable_notification=True,
+        )
+    elif 'webcam' in call.data:
+        text = ''
+        for name in places:
+            if not places[name]['webcam'] is None:
+                text += f"[{name}]({places[name]['webcam']})\n"
         bot.send_message(
             call.message.chat.id,
             text,
@@ -142,13 +154,12 @@ def query_handler(call):
         )
     elif 'get_trail' in call.data:
         name = call.data.split('&')[1]
-        text = f'{name}'
         try:
-            with open(f'trail_maps/{trail_maps[name]}', 'rb') as file:
+            with open(f"trail_maps/{places[name]['trail_map']}", 'rb') as file:
                 bot.send_photo(
                     call.message.chat.id,
                     photo=file,
-                    caption=text,
+                    caption=name,
                     disable_notification=True,
                 )
         except FileNotFoundError as e:
@@ -159,14 +170,10 @@ def query_handler(call):
                 disable_notification=True,
             )
     else:
-        answer = {
-            'webcam': webcam_msg,
-        }
-        text = answer.get(call.data, 'Неизвестный запрос')
+        text = 'Неизвестный запрос'
         bot.send_message(
             call.message.chat.id,
             text,
-            disable_web_page_preview=True,
             disable_notification=True,
         )
     try:
