@@ -102,6 +102,7 @@ def query_handler(call):
         bot.send_message(
             call.message.chat.id,
             text,
+            parse_mode='Markdown',
             disable_web_page_preview=True,
             disable_notification=True,
         )
