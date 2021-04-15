@@ -1,9 +1,12 @@
 import os
+import requests
+import time
 
+import logging
 import telebot
 from telebot.apihelper import ApiTelegramException
 from telebot.types import (InlineKeyboardButton,
-                           InlineKeyboardMarkup, ReplyKeyboardMarkup,)
+                           InlineKeyboardMarkup, ReplyKeyboardMarkup)
 
 from db import places
 from utils import weather
@@ -11,6 +14,10 @@ from utils import weather
 
 token = os.environ.get('SAYAN_TOKEN')
 bot = telebot.TeleBot(token)
+
+
+logger = telebot.logger
+telebot.logger.setLevel(logging.INFO)
 
 
 main_kbrd = ReplyKeyboardMarkup(True)
@@ -79,8 +86,8 @@ def query_handler(call):
             text,
             reply_markup=keyboard,
             disable_notification=True,
-        )     
-    elif call.data == 'location' or call.data == 'info' or call.data == 'weather':
+        )
+    elif call.data in ('location', 'info', 'weather'):
         keyboard = InlineKeyboardMarkup()
         for name in places:
             button = InlineKeyboardButton(
@@ -98,22 +105,29 @@ def query_handler(call):
     elif 'weather' in call.data:
         name = call.data.split('&')[1]
         coordinates = places[name]['coordinates']
-        text = weather(coordinates)
-        bot.send_message(
-            call.message.chat.id,
-            text,
-            disable_web_page_preview=True,
-            disable_notification=True,
-        )
-    elif 'webcam' in call.data:
-        text = ''
-        for name in places:
-            if not places[name]['webcam'] is None:
-                text += f"[{name}]({places[name]['webcam']})\n"
+        text = f'{name}\n{weather(coordinates)}'
         bot.send_message(
             call.message.chat.id,
             text,
             parse_mode='Markdown',
+            disable_web_page_preview=True,
+            disable_notification=True,
+        )
+    elif 'webcam' in call.data:
+        keyboard = InlineKeyboardMarkup()
+        for name in places:
+            if places[name]['webcam'] is not None:
+                button = InlineKeyboardButton(
+                    name,
+                    url=places[name]['webcam'],
+                )
+                keyboard.add(button)
+        text = 'Веб-камеры ' + u'\U0001F3A5' + '\n'
+        bot.send_message(
+            call.message.chat.id,
+            text,
+            parse_mode='Markdown',
+            reply_markup=keyboard,
             disable_web_page_preview=True,
             disable_notification=True,
         )
@@ -179,7 +193,12 @@ def query_handler(call):
     try:
         bot.delete_message(call.message.chat.id, call.message.message_id)
     except ApiTelegramException as e:
-        print(repr(e))
+        logging.error(repr(e))
 
 
-bot.polling()
+while True:
+    try:
+        bot.polling(True)
+    except requests.exceptions.ConnectionError as e:
+        logging.error(repr(e))
+        time.sleep(30)
