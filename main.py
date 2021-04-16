@@ -4,7 +4,7 @@ import time
 
 import logging
 import telebot
-from telebot.apihelper import ApiTelegramException
+from logging.handlers import RotatingFileHandler
 from telebot.types import (InlineKeyboardButton,
                            InlineKeyboardMarkup, ReplyKeyboardMarkup)
 
@@ -16,8 +16,19 @@ token = os.environ.get('SAYAN_TOKEN')
 bot = telebot.TeleBot(token)
 
 
-logger = telebot.logger
-telebot.logger.setLevel(logging.INFO)
+rotate_file_handler = RotatingFileHandler(
+    'log.log',
+    maxBytes=5000000,
+    backupCount=2,
+)
+console_out_hundler = logging.StreamHandler(
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(funcName)s: %(message)s',
+    handlers=[console_out_hundler, rotate_file_handler],
+)
 
 
 main_kbrd = ReplyKeyboardMarkup(True)
@@ -153,7 +164,7 @@ def query_handler(call):
             f"Сайт: {places[name]['url']}\n"
             f"Количество трасс: {places[name]['info']['trails']}\n"
             f"Самая длинная трасса: {places[name]['info']['max_length']} км\n"
-            f"Общая протяженность трасс: {places[name]['info']['total_length']} км\n"
+            f"Общая протяженность трасс: {places[name]['info']['total_length']} км\n" # noqa
             f"Перепад высот: {places[name]['info']['vertical_drop']} м\n"
             f"Максимальная высота: {places[name]['info']['max_elevation']} м\n"
             f"Количество подъемников: {places[name]['info']['lifts']}\n"
@@ -176,8 +187,8 @@ def query_handler(call):
                     caption=name,
                     disable_notification=True,
                 )
-        except FileNotFoundError as e:
-            print(repr(e))
+        except FileNotFoundError as error:
+            logging.error(repr(error))
             bot.send_message(
                 call.message.chat.id,
                 'Упс.. что-то пошло не так',
@@ -185,6 +196,7 @@ def query_handler(call):
             )
     else:
         text = 'Неизвестный запрос'
+        logging.error(text)
         bot.send_message(
             call.message.chat.id,
             text,
@@ -192,13 +204,15 @@ def query_handler(call):
         )
     try:
         bot.delete_message(call.message.chat.id, call.message.message_id)
-    except ApiTelegramException as e:
-        logging.error(repr(e))
+    except telebot.apihelper.ApiTelegramException as error:
+        logging.error(repr(error))
 
 
-while True:
-    try:
-        bot.polling(True)
-    except requests.exceptions.ConnectionError as e:
-        logging.error(repr(e))
-        time.sleep(30)
+if __name__ == '__main__':
+    while True:
+        try:
+            logging.info('Start polling')
+            bot.polling()
+        except requests.exceptions.ConnectionError as error:
+            logging.error(repr(error))
+            time.sleep(30)
