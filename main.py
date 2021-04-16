@@ -1,20 +1,19 @@
-import os
-import requests
-import time
-
 import logging
-import telebot
+import os
+import time
 from logging.handlers import RotatingFileHandler
-from telebot.types import (InlineKeyboardButton,
-                           InlineKeyboardMarkup, ReplyKeyboardMarkup)
+
+import requests
+import telebot
+from telebot.types import (InlineKeyboardButton, InlineKeyboardMarkup,
+                           ReplyKeyboardMarkup)
 
 from db import places
 from utils import weather
 
+TOKEN = os.environ.get('SAYAN_TOKEN')
 
-token = os.environ.get('SAYAN_TOKEN')
-bot = telebot.TeleBot(token)
-
+bot = telebot.TeleBot(TOKEN)
 
 rotate_file_handler = RotatingFileHandler(
     'log.log',
