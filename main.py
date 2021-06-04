@@ -1,18 +1,21 @@
 import logging
-import os
 import time
 from logging.handlers import RotatingFileHandler
+from os import environ
 
 import requests
 import telebot
+from dotenv import load_dotenv
 from telebot.types import (InlineKeyboardButton, InlineKeyboardMarkup,
                            ReplyKeyboardMarkup)
 
 from db import places
 from utils import weather
 
-TOKEN = os.environ.get('SAYAN_TOKEN')
+load_dotenv()
 
+TOKEN = environ['BOT_TOKEN']
+print(TOKEN)
 bot = telebot.TeleBot(TOKEN)
 
 rotate_file_handler = RotatingFileHandler(

@@ -1,3 +1,4 @@
 __pycache__/
 parcing_gismeteo.py
 log.log
+.env
