@@ -56,12 +56,12 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           script: |
             cd sayanbot
-            docker stop sayanbot
-            docker rm -f sayanbot 
-            docker system prune -f
+            sudo docker stop sayanbot
+            sudo docker rm -f sayanbot 
+            sudo docker system prune -f
             echo BOT_TOKEN=${{ secrets.BOT_TOKEN }} > .env
             echo GIS_TOKEN=${{ secrets.GIS_TOKEN }} >> .env
             echo YA_TOKEN=${{ secrets.YA_TOKEN }} >> .env
             echo OP_TOKEN=${{ secrets.OP_TOKEN }} >> .env
-            docker build -t sayanbot .
-            docker run -d --name sayanbot sayanbot
+            sudo docker build -t sayanbot .
+            sudo docker run -d --name sayanbot sayanbot
