@@ -1,5 +1,4 @@
 import logging
-import time
 from logging.handlers import RotatingFileHandler
 from os import environ
 
@@ -15,7 +14,6 @@ from utils import weather
 load_dotenv()
 
 TOKEN = environ['BOT_TOKEN']
-print(TOKEN)
 bot = telebot.TeleBot(TOKEN)
 
 rotate_file_handler = RotatingFileHandler(
@@ -211,10 +209,8 @@ def query_handler(call):
 
 
 if __name__ == '__main__':
-    while True:
-        try:
-            logging.info('Start polling')
-            bot.polling()
-        except requests.exceptions.ConnectionError as error:
-            logging.error(repr(error))
-            time.sleep(30)
+    try:
+        logging.info('Start polling')
+        bot.polling()
+    except requests.exceptions.ConnectionError as error:
+        logging.error(repr(error))
