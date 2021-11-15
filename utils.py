@@ -8,7 +8,7 @@ load_dotenv()
 
 
 def gis_weather(coordinates):
-    token = environ.get('GIS_TOKEN')
+    token = environ.get('GIS_TOKEN2')
     url = 'https://api.gismeteo.net/v2/weather/current/'
     headers = {
         'X-Gismeteo-Token': token,
