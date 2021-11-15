@@ -40,7 +40,7 @@ jobs:
           username: ${{ secrets.USER }}
           password: ${{ secrets.PASSWORD }}
           source: "*,!.git,!.github"
-          target: "~/sayanbot"
+          target: "sayanbot"
           overwrite: true
 
   deploy:
@@ -59,7 +59,6 @@ jobs:
             docker stop sayanbot
             docker rm -f sayanbot 
             docker system prune -f
-            touch .env
             echo BOT_TOKEN=${{ secrets.BOT_TOKEN }} > .env
             echo GIS_TOKEN=${{ secrets.GIS_TOKEN }} >> .env
             echo YA_TOKEN=${{ secrets.YA_TOKEN }} >> .env
