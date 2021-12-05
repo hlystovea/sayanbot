@@ -8,6 +8,7 @@ python-jsonrpc-server = "==0.4.0"
 requests = "==2.24.0"
 pyTelegramBotAPI = "==3.7.3"
 python-dotenv = "*"
+pydantic = "*"
 
 [dev-packages]
 
