@@ -1,7 +1,6 @@
-from typing import Optional, Tuple
+from typing import List, Optional
 
 from pydantic import AnyHttpUrl, BaseModel
-from pydantic.types import FilePath
 
 
 class ResortInfo(BaseModel):
@@ -17,10 +16,10 @@ class ResortInfo(BaseModel):
 class Resort(BaseModel):
     name: str
     slug: str
-    coordinates: Tuple[int]
+    coordinates: List[float]
     show_weather: bool
     phone: Optional[str]
     url: Optional[AnyHttpUrl]
     webcam: Optional[AnyHttpUrl]
-    trail_map: Optional[FilePath]
+    trail_map: Optional[str]
     info: Optional[ResortInfo]
