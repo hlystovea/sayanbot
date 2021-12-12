@@ -1,11 +1,12 @@
 import asyncio
 from os import environ
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic.tools import parse_obj_as
 
-# from ..schema.resort import Resort
+from schema.resort import Resort
 
 load_dotenv()
 
@@ -30,16 +31,16 @@ class MongoDB:
     def resort_collection(self):
         return self.client.sayanbot.ski_resort
 
-    """async def get_resort_by_slug(self, slug: str) -> Optional[Resort]:
-        resort = await self.resort_collection().find_one({'slug': slug})
-        if not resort:
+    async def find_one_resort(self, kwargs: Dict = None) -> Optional[Resort]:
+        document = await self.resort_collection().find_one(kwargs or {})
+        if not document:
             return None
-        return Resort(resort)"""
+        return Resort(**document)
 
-    async def get_all_resorts(self) -> Optional[list[Dict]]:
-        cursor = self.resort_collection().find()
-        resorts = await cursor.to_list(length=10)
-        return resorts
+    async def find_many_resorts(self, kwargs: Dict = None, length: int = None) -> List[Resort]: # noqa
+        cursor = self.resort_collection().find(kwargs or {})
+        documents = await cursor.to_list(length=length)
+        return parse_obj_as(List[Resort], documents)
 
 
 async def main():
