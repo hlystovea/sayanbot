@@ -25,7 +25,7 @@ class MongoDB:
             info = await mongo.client.server_info()
             print(f'Started server MongoDB ({info.get("version")} version)')
         except Exception:
-            print("Unable to connect to the server.")
+            print('Unable to connect to the server.')
         return mongo
 
     def resort_collection(self):
