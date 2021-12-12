@@ -1,6 +1,7 @@
 places = {
     'ГК "Гладенькая"': {
         'coordinates': (52.927255, 91.361045),
+        'show_weather': True,
         'phone': '+79233933300',
         'url': 'http://ski-gladenkaya.ru',
         'webcam': 'http://ski-gladenkaya.ru/ski/webcam.html',
@@ -17,6 +18,7 @@ places = {
     },
     'ГК "Черёмуховый лог"': {
         'coordinates': (52.853902, 91.408986),
+        'show_weather': True,
         'phone': '+73904231216',
         'url': 'http://info-borus.ru/ski/',
         'webcam': None,
@@ -33,6 +35,7 @@ places = {
     },
     'База "Ергаки"': {
         'coordinates': (52.837717, 93.255870),
+        'show_weather': True,
         'phone': '88007076270',
         'url': 'http://ergaki.com/',
         'webcam': None,
@@ -97,6 +100,7 @@ places = {
     },
     'ГК "Бобровый лог"': {
         'coordinates': (55.962128, 92.794737),
+        'show_weather': True,
         'phone': '+73912568686',
         'url': 'https://bobrovylog.ru/',
         'webcam': 'https://bobrovylog.ru/about/webcam/',
@@ -113,6 +117,7 @@ places = {
     },
     'Приисковый': {
         'coordinates': (54.652993, 88.703671),
+        'show_weather': True,
         'phone': '88005003449',
         'url': 'https://priiskovy.ru/',
         'webcam': None,
@@ -129,6 +134,7 @@ places = {
     },
     'Шерегеш': {
         'coordinates': (52.947942, 87.932612),
+        'show_weather': True,
         'phone': '',
         'url': 'https://gesh.ru/',
         'webcam': 'https://gesh.ru/webcamera/',
@@ -145,6 +151,7 @@ places = {
     },
     'ГК "Оленья подкова"': {
         'coordinates': (54.345838, 93.250253),
+        'show_weather': True,
         'phone': '+79024688352',
         'url': 'https://vk.com/gora_korona/',
         'webcam': None,
@@ -161,6 +168,7 @@ places = {
     },
     'ГК "Сюгеш"': {
         'coordinates': (52.717182, 89.918972),
+        'show_weather': True,
         'phone': '+79833779577',
         'url': 'https://sugesh.ru/',
         'webcam': None,
