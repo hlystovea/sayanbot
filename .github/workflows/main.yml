@@ -80,6 +80,7 @@ jobs:
             cd sayanbot
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/sayanbot:latest
             sudo docker-compose stop
+            sudo docker-compose rm sayanbot
             echo BOT_TOKEN=${{ secrets.BOT_TOKEN }} > .env
             echo GIS_TOKEN=${{ secrets.GIS_TOKEN }} >> .env
             echo YA_TOKEN=${{ secrets.YA_TOKEN }} >> .env
