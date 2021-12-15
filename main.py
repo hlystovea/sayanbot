@@ -10,9 +10,10 @@ from pydantic.error_wrappers import ValidationError
 
 from schema.resort import Resort
 from store.mongo import MongoDB
-from utils import weather
+from utils.weather import get_current_weather
 
 load_dotenv()
+
 
 BOT_TOKEN = environ['BOT_TOKEN']
 bot = Bot(token=BOT_TOKEN)
@@ -145,7 +146,8 @@ async def callback_query_handler(call: types.CallbackQuery):
         elif 'get_weather' in call.data:
             slug = call.data.split('&')[1]
             resort = await mongo.find_one_resort({'slug': slug})
-            text = f'{resort.name}\n{weather(resort.coordinates)}'
+            text = (f'{resort.name}\n'
+                    f'{await get_current_weather(resort.coordinates)}')
             await call.message.reply(
                 text,
                 parse_mode='Markdown',
