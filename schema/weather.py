@@ -34,10 +34,7 @@ class Weather(BaseModel):
     feels_like: int
 
     def current_weather(self):
-        temp = self.temp
-        wind = self.wind_speed
-        cond = self.cond
-        return f'{temp:+.1f} \xb0С, {wind} м/с, {cond}'
+        return f'{self.temp:+.1f} \xb0С, {self.wind_speed} м/с, {self.cond}'
 
 
 class Gismeteo(Weather):
