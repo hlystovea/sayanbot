@@ -50,6 +50,7 @@ class TrackState(StatesGroup):
     waiting_for_track_name = State()
     waiting_for_track_region = State()
     waiting_for_track_description = State()
+    waiting_for_track_region_choose = State()
     waiting_for_track_choose = State()
 
 
@@ -255,6 +256,42 @@ async def set_track_description(message: types.Message, state: FSMContext):
 
 
 @dp.callback_query_handler(
+    track_cb.filter(action='list'),
+    state=TrackState.waiting_for_track_region_choose,
+)
+async def list_track(
+    query: types.CallbackQuery,
+    callback_data: Dict[str, str],
+    state: FSMContext,
+):
+    """
+    This handler will be called when the user sets
+    the waiting_for_track_region_choose state
+    """
+    tracks = await mongo.find_many_tracks(
+        {
+            'region': callback_data['answer'],
+            'chat_id': query.message.chat.id,
+        }
+    )
+    markup = types.InlineKeyboardMarkup()
+    for track in tracks:
+        button = types.InlineKeyboardButton(
+            track.name,
+            callback_data=track_cb.new(
+                action='get',
+                answer=track.unique_id,
+            ),
+        )
+        markup.add(button)
+    await query.message.edit_text(
+        'Выберите маршрут:',
+        reply_markup=markup,
+    )
+    await TrackState.waiting_for_track_choose.set()
+
+
+@dp.callback_query_handler(
     track_cb.filter(action='get'),
     state=TrackState.waiting_for_track_choose,
 )
@@ -313,21 +350,23 @@ async def callback_query_handler(call: types.CallbackQuery):
                     'Список маршрутов пуст. Вы можете загрузить свой маршрут '
                     'отправив gpx файл в этот чат.'
                 )
-            keyboard = types.InlineKeyboardMarkup()
-            for track in tracks:
+            regions = [track.region for track in tracks]
+            resorts = await mongo.find_many_resorts({'slug': {'$in': regions}})
+            markup = types.InlineKeyboardMarkup()
+            for resort in resorts:
                 button = types.InlineKeyboardButton(
-                    track.name,
+                    resort.name,
                     callback_data=track_cb.new(
-                        action='get',
-                        answer=track.unique_id
+                        action='list',
+                        answer=resort.slug,
                     ),
                 )
-                keyboard.add(button)
+                markup.add(button)
             await call.message.edit_text(
-                'Выберите маршрут:',
-                reply_markup=keyboard,
+                'Выберите регион катания:',
+                reply_markup=markup,
             )
-            await TrackState.waiting_for_track_choose.set()
+            await TrackState.waiting_for_track_region_choose.set()
         elif call.data == 'webcam':
             keyboard = types.InlineKeyboardMarkup()
             resorts = await mongo.find_many_resorts(
