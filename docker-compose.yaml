@@ -10,7 +10,7 @@ services:
       - ./.env
 
   mongodb:
-    image: mongo #:4.4.10
+    image: mongo:4.4.10
     container_name: mongodb
     restart: unless-stopped
     env_file:
