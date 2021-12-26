@@ -9,7 +9,6 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils.callback_data import CallbackData
 from dotenv import load_dotenv
-from pydantic.error_wrappers import ValidationError
 
 from schema.resort import Resort
 from schema.track import Track
@@ -50,11 +49,11 @@ class TrackState(StatesGroup):
     waiting_for_track_name = State()
     waiting_for_track_region = State()
     waiting_for_track_description = State()
-    waiting_for_track_region_choose = State()
-    waiting_for_track_choose = State()
 
 
 track_cb = CallbackData('track', 'action', 'answer')
+main_cb = CallbackData('main', 'action', 'answer')
+
 
 buttons = {
     1: ('Погода на склоне', 'weather'),
@@ -66,33 +65,29 @@ buttons = {
 }
 
 
-def get_keyboard() -> types.InlineKeyboardMarkup:
+def get_start_keyboard() -> types.InlineKeyboardMarkup:
     """
     Generate keyboard with list of buttons
     """
     keyboard = types.InlineKeyboardMarkup()
-    for b in sorted(buttons):
+    for _, b in buttons.items():
         button = types.InlineKeyboardButton(
-            buttons[b][0],
-            callback_data=buttons[b][1])
+            b[0],
+            callback_data=main_cb.new(action=b[1], answer='_'),
+        )
         keyboard.add(button)
     return keyboard
 
 
-async def send_keyboard_with_resorts(call: types.CallbackQuery, resorts: List[Resort]): # noqa
-    keyboard = types.InlineKeyboardMarkup()
+def get_keyboard_with_resorts(action: str, resorts: List[Resort]):
+    markup = types.InlineKeyboardMarkup()
     for resort in resorts:
         button = types.InlineKeyboardButton(
             resort.name,
-            callback_data=f'get_{call.data}&{resort.slug}',
+            callback_data=main_cb.new(action=action, answer=resort.slug),
         )
-        keyboard.add(button)
-    text = 'Выберите место:'
-    await call.message.reply(
-        text,
-        reply_markup=keyboard,
-        disable_notification=True,
-    )
+        markup.add(button)
+    return markup
 
 
 @dp.message_handler(commands=['start', 'help'], state='*')
@@ -106,7 +101,7 @@ async def start(message: types.Message, state: FSMContext):
             '*"Показать список команд"*')
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row('Показать список команд')
-    await message.reply(
+    await message.answer(
         text,
         reply_markup=markup,
         parse_mode='Markdown',
@@ -117,17 +112,16 @@ async def start(message: types.Message, state: FSMContext):
 @dp.message_handler(text=['Показать список команд'], state='*')
 async def list_commands(message: types.Message, state: FSMContext):
     """
-    This handler will be called when user sends text "показать список команд"
+    This handler will be called when user sends text "Показать список команд"
     """
     await state.finish()
-    markup = get_keyboard()
+    markup = get_start_keyboard()
     text = 'Выберите команду:'
     await message.answer(text, reply_markup=markup, disable_notification=True)
-    await bot.delete_message(message.chat.id, message.message_id)
 
 
 @dp.message_handler(content_types=['document'], state='*')
-async def file_handler(message: types.File, state: FSMContext):
+async def track_file_handler(message: types.File, state: FSMContext):
     """
     This handler will be called when the user sends a file
     """
@@ -174,6 +168,7 @@ async def save_track_handler(
     This handler will be called when the user sets
     the waiting_for_track_save state
     """
+
     if callback_data['answer'] == 'no':
         await state.finish()
         return await bot.delete_message(
@@ -211,7 +206,10 @@ async def set_track_region(
     This handler will be called when the user sets
     the waiting_for_track_region state
     """
-    await state.update_data(region=callback_data['answer'])
+    await state.update_data(
+        region=callback_data['answer'],
+        parent_message_id=query.message.message_id,
+    )
     await query.message.edit_text(
         'Введите название маршрута. Например, "Ски-тур вокруг Боруса":'
     )
@@ -225,14 +223,20 @@ async def set_track_name(message: types.Message, state: FSMContext):
     the waiting_for_track_name state
     """
     if len(message.text) > 40:
-        return await message.answer(
-            'Название не должно быть длинее 40 cимволов.',
+        return await message.reply(
+            'Название не должно быть длинее 40 cимволов',
+            disable_notification=True,
         )
     await state.update_data(name=message.text)
-    await message.answer(
-        'Введите описание маршрута. Например, '
-        '"24 км на лыжах вокруг хребта Борус (12.02.2021)":'
+    data = await state.get_data()
+    text = ('Введите описание маршрута. Например, '
+            '"24 км на лыжах вокруг хребта Борус (12.02.2021)":')
+    await bot.edit_message_text(
+        text,
+        chat_id=message.chat.id,
+        message_id=data['parent_message_id'],
     )
+    await message.delete()
     await TrackState.waiting_for_track_description.set()
 
 
@@ -243,76 +247,85 @@ async def set_track_description(message: types.Message, state: FSMContext):
     the waiting_for_track_description state
     """
     await state.update_data(description=message.text)
-    track = await state.get_data()
+    data = await state.get_data()
     try:
-        await mongo.insert_track(Track(**track))
+        await mongo.insert_track(Track(**data))
     except Exception as error:
         logging.error(repr(error))
-        await message.answer('Упс.. что-то пошло не так.')
+        await message.answer('Упс.. что-то пошло не так')
     else:
-        await message.answer('Маршрут добавлен.')
+        await bot.edit_message_text(
+            'Маршрут добавлен.',
+            message.chat.id,
+            message_id=data['parent_message_id'],
+        )
+        await message.delete()
     finally:
         await state.finish()
 
 
-@dp.callback_query_handler(
-    track_cb.filter(action='list'),
-    state=TrackState.waiting_for_track_region_choose,
-)
-async def list_track(
+@dp.callback_query_handler(main_cb.filter(action=['tracks', 'get_track']))
+async def get_track_handler(
     query: types.CallbackQuery,
     callback_data: Dict[str, str],
-    state: FSMContext,
 ):
     """
-    This handler will be called when the user sets
-    the waiting_for_track_region_choose state
+    This handler will be called when user sends
+    callback_query with weather action
     """
-    tracks = await mongo.find_many_tracks(
-        {
-            'region': callback_data['answer'],
-            'chat_id': query.message.chat.id,
-        }
-    )
-    markup = types.InlineKeyboardMarkup()
-    for track in tracks:
-        button = types.InlineKeyboardButton(
-            track.name,
-            callback_data=track_cb.new(
-                action='get',
-                answer=track.unique_id,
-            ),
+
+    action = callback_data['action']
+    answer = callback_data['answer']
+
+    if answer == '_':
+        tracks = await mongo.find_many_tracks(
+            {
+                'chat_id': query.message.chat.id,
+            },
         )
-        markup.add(button)
-    await query.message.edit_text(
-        'Выберите маршрут:',
-        reply_markup=markup,
-    )
-    await TrackState.waiting_for_track_choose.set()
+        if len(tracks) == 0:
+            return await query.message.edit_text(
+                'Список маршрутов пуст. Вы можете загрузить свой маршрут '
+                'отправив gpx файл в этот чат.'
+            )
+        regions = [track.region for track in tracks]
+        resorts = await mongo.find_many_resorts({'slug': {'$in': regions}})
+        return await query.message.edit_text(
+            'Выберите район катания:',
+            reply_markup=get_keyboard_with_resorts(action, resorts),
+        )
 
+    if action == 'tracks':
+        tracks = await mongo.find_many_tracks(
+            {
+                'region': answer,
+                'chat_id': query.message.chat.id,
+            }
+        )
+        markup = types.InlineKeyboardMarkup()
+        for track in tracks:
+            button = types.InlineKeyboardButton(
+                track.name,
+                callback_data=main_cb.new(
+                    action='get_track',
+                    answer=track.unique_id,
+                ),
+            )
+            markup.add(button)
+        return await query.message.edit_text(
+            'Выберите маршрут:',
+            reply_markup=markup,
+        )
 
-@dp.callback_query_handler(
-    track_cb.filter(action='get'),
-    state=TrackState.waiting_for_track_choose,
-)
-async def get_track(
-    query: types.CallbackQuery,
-    callback_data: Dict[str, str],
-    state: FSMContext,
-):
-    """
-    This handler will be called when the user sets
-    the waiting_for_track_choose state
-    """
     track = await mongo.find_one_track(
         {
-            'unique_id': callback_data['answer'],
+            'unique_id': answer,
             'chat_id': query.message.chat.id,
-        }
+        },
     )
     if track is None:
-        logging.error(f'Track not found: unique_id {callback_data["answer"]}')
-        return await query.message.edit_text('Упс.. Что-то пошло не так.')
+        logging.error(f'Track not found: unique_id {answer}')
+        return await query.message.edit_text('Упс.. Что-то пошло не так')
     await query.message.answer_document(
         track.file_id,
         caption=f'*{track.name}:*\n{track.description}',
@@ -320,153 +333,80 @@ async def get_track(
         parse_mode='Markdown',
     )
     await query.message.delete()
-    await state.finish()
 
 
-@dp.callback_query_handler(lambda callback_query: True)
-async def callback_query_handler(call: types.CallbackQuery):
+@dp.callback_query_handler(
+    main_cb.filter(
+        action=['weather', 'info', 'webcam', 'trail_map', 'coordinates']
+    ),
+)
+async def resort_information_handler(
+    query: types.CallbackQuery,
+    callback_data: Dict[str, str],
+):
     """
-    This handler will be called when user sends callback_query
+    This handler will be called when user sends
+    callback_query with info/webcam/trail_map/coordinates action
     """
-    try:
-        if call.data in ('coordinates', 'info', 'trail_map'):
-            resorts = await mongo.find_many_resorts(
-                {call.data: {'$nin': [None, '', [], {}]}},
-            )
-            await send_keyboard_with_resorts(call, resorts)
-        elif call.data == 'weather':
-            resorts = await mongo.find_many_resorts(
-                {'show_weather': True},
-            )
-            await send_keyboard_with_resorts(call, resorts)
-        elif call.data == 'tracks':
-            tracks = await mongo.find_many_tracks(
-                {
-                    'chat_id': call.message.chat.id,
-                }
-            )
-            if len(tracks) == 0:
-                return await call.message.edit_text(
-                    'Список маршрутов пуст. Вы можете загрузить свой маршрут '
-                    'отправив gpx файл в этот чат.'
-                )
-            regions = [track.region for track in tracks]
-            resorts = await mongo.find_many_resorts({'slug': {'$in': regions}})
-            markup = types.InlineKeyboardMarkup()
-            for resort in resorts:
-                button = types.InlineKeyboardButton(
-                    resort.name,
-                    callback_data=track_cb.new(
-                        action='list',
-                        answer=resort.slug,
-                    ),
-                )
-                markup.add(button)
-            await call.message.edit_text(
-                'Выберите регион катания:',
-                reply_markup=markup,
-            )
-            await TrackState.waiting_for_track_region_choose.set()
-        elif call.data == 'webcam':
-            keyboard = types.InlineKeyboardMarkup()
-            resorts = await mongo.find_many_resorts(
-                {'webcam': {'$nin': [None, '']}}
-            )
-            for resort in resorts:
-                button = types.InlineKeyboardButton(
-                    resort.name,
-                    url=resort.webcam,
-                )
-                keyboard.add(button)
-            text = 'Веб-камеры ' + u'\U0001F3A5' + '\n'
-            await bot.send_message(
-                call.message.chat.id,
-                text,
-                parse_mode='Markdown',
-                reply_markup=keyboard,
-                disable_web_page_preview=True,
-                disable_notification=True,
-            )
-        elif 'get_weather' in call.data:
-            slug = call.data.split('&')[1]
-            resort = await mongo.find_one_resort({'slug': slug})
-            text = (f'{resort.name}\n'
-                    f'{await get_current_weather(resort.coordinates)}')
-            await call.message.reply(
-                text,
-                parse_mode='Markdown',
-                disable_web_page_preview=True,
-                disable_notification=True,
-            )
-        elif 'get_coordinates' in call.data:
-            slug = call.data.split('&')[1]
-            resort = await mongo.find_one_resort({'slug': slug})
-            lat = resort.coordinates[0]
-            lon = resort.coordinates[1]
-            title = resort.name
-            address = f'{lat}, {lon}'
-            await bot.send_venue(
-                call.message.chat.id,
-                lat,
-                lon,
-                title,
-                address,
-                disable_notification=True,
-            )
-        elif 'get_info' in call.data:
-            slug = call.data.split('&')[1]
-            resort = await mongo.find_one_resort({'slug': slug})
-            text = (
-                f"*{resort.name}\n*"
-                f"Телефон: {resort.phone}\n"
-                f"Сайт: {resort.url}\n"
-                f"Количество трасс: {resort.info.trails}\n"
-                f"Самая длинная трасса: {resort.info.max_length} км\n"
-                f"Общая протяженность трасс: {resort.info.total_length} км\n"
-                f"Перепад высот: {resort.info.vertical_drop} м\n"
-                f"Максимальная высота: {resort.info.max_elevation} м\n"
-                f"Количество подъемников: {resort.info.lifts}\n"
-                f"Тип подъемников: {resort.info.type_lift}\n"
-            )
-            await bot.send_message(
-                call.message.chat.id,
-                text,
-                parse_mode='Markdown',
-                disable_web_page_preview=True,
-                disable_notification=True,
-            )
-        elif 'get_trail_map' in call.data:
-            slug = call.data.split('&')[1]
-            resort = await mongo.find_one_resort({'slug': slug})
-            try:
-                with open(f'trail_maps/{resort.trail_map}', 'rb') as file:
-                    await bot.send_photo(
-                        call.message.chat.id,
-                        photo=file,
-                        caption=resort.name,
-                        disable_notification=True,
-                    )
-            except FileNotFoundError as error:
-                logging.error(repr(error))
-                await bot.send_message(
-                    call.message.chat.id,
-                    'Упс.. что-то пошло не так',
+
+    action = callback_data['action']
+    answer = callback_data['answer']
+
+    if answer == '_':
+        resorts = await mongo.find_many_resorts(
+            {action: {'$nin': [None, '', [], {}, False]}},
+        )
+        if len(resorts) == 0:
+            return await query.message.edit_text('Упс.. что-то пошло не так')
+        return await query.message.edit_text(
+            'Выберите место:',
+            reply_markup=get_keyboard_with_resorts(action, resorts),
+        )
+
+    resort = await mongo.find_one_resort({'slug': answer})
+    if not resort:
+        logging.error(f'Resort not found. Slug: {answer}')
+        return await query.message.edit_text('Упс.. что-то пошло не так')
+
+    if action == 'weather':
+        text = f'{resort.name}\n{await get_current_weather(resort.coordinates)}' # noqa (E501)
+        await query.message.edit_text(
+            text,
+            parse_mode='Markdown',
+            disable_web_page_preview=True,
+        )
+    if action == 'info':
+        await query.message.edit_text(
+            resort.get_info(),
+            parse_mode='Markdown',
+            disable_web_page_preview=True,
+        )
+    if action == 'webcam':
+        await query.message.edit_text(
+            resort.webcam,
+            disable_web_page_preview=True,
+        )
+    if action == 'trail_map':
+        try:
+            with open(f'trail_maps/{resort.trail_map}', 'rb') as file:
+                await query.message.answer_photo(
+                    photo=file,
+                    caption=resort.name,
                     disable_notification=True,
                 )
-        else:
-            text = 'Неизвестный запрос'
-            logging.error(text)
-            await bot.send_message(
-                call.message.chat.id,
-                text,
-                disable_notification=True,
-            )
-    except ValidationError as error:
-        logging.error(repr(error))
-        await call.message.reply(
-            'Упс.. что-то пошло не так',
+                await query.message.delete()
+        except FileNotFoundError as error:
+            logging.error(repr(error))
+            await query.message.edit_text('Упс.. что-то пошло не так')
+    if action == 'coordinates':
+        await query.message.answer_venue(
+            latitude=resort.coordinates[0],
+            longitude=resort.coordinates[1],
+            title=resort.name,
+            address=f'{resort.coordinates[0]}, {resort.coordinates[1]}',
             disable_notification=True,
         )
+        await query.message.delete()
 
 
 if __name__ == '__main__':
