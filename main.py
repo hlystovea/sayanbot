@@ -8,14 +8,13 @@ from aiogram.contrib.fsm_storage.mongo import MongoStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils.callback_data import CallbackData
-from dotenv import load_dotenv
+from pydantic import ValidationError
 
+from db.mongo import MongoDB
 from schema.resort import Resort
 from schema.track import Track
-from store.mongo import MongoDB
-from utils.weather import get_current_weather
-
-load_dotenv()
+from schema.weather import Weather
+from utils.weather import get_current_weather, get_forecast_24h
 
 
 BOT_TOKEN = environ['BOT_TOKEN']
@@ -51,8 +50,13 @@ class TrackState(StatesGroup):
     waiting_for_track_description = State()
 
 
+class WeatherState(StatesGroup):
+    waiting_for_weather_action = State()
+
+
 track_cb = CallbackData('track', 'action', 'answer')
 main_cb = CallbackData('main', 'action', 'answer')
+weather_cb = CallbackData('weather', 'action', 'answer')
 
 
 buttons = {
@@ -62,6 +66,11 @@ buttons = {
     4: ('Карты склонов', 'trail_map'),
     5: ('Веб-камеры', 'webcam'),
     6: ('GPS-треки', 'tracks'),
+}
+
+weather_actions = {
+    'current': 'Погода сейчас {temp}',
+    'forecast_24h': 'Прогноз на завтра',
 }
 
 
@@ -88,6 +97,19 @@ def get_keyboard_with_resorts(action: str, resorts: List[Resort]):
         )
         markup.add(button)
     return markup
+
+
+async def send_message_with_resorts(query: types.CallbackQuery, action: str):
+    resorts = await mongo.find_many_resorts(
+        {action: {'$nin': [None, '', [], {}, False]}},
+    )
+    if len(resorts) == 0:
+        logging.error(f'Resorts not found. Action: {action}')
+        return await query.message.edit_text('Упс.. что-то пошло не так')
+    return await query.message.edit_text(
+        'Выберите место:',
+        reply_markup=get_keyboard_with_resorts(action, resorts),
+    )
 
 
 @dp.message_handler(commands=['start', 'help'], state='*')
@@ -271,7 +293,7 @@ async def get_track_handler(
 ):
     """
     This handler will be called when user sends
-    callback_query with weather action
+    callback_query with tracks or get_track action
     """
 
     action = callback_data['action']
@@ -336,8 +358,112 @@ async def get_track_handler(
 
 
 @dp.callback_query_handler(
+    weather_cb.filter(action='get_weather'),
+    state=WeatherState.waiting_for_weather_action,
+)
+async def get_weather_handler(
+    query: types.CallbackQuery,
+    callback_data: Dict[str, str],
+    state: FSMContext,
+):
+    """
+    This handler will be called when the user sets
+    the waiting_for_weather_action state
+    """
+    data = await state.get_data()
+
+    if callback_data['answer'] == 'current':
+        try:
+            current_weather = Weather(**data['current_weather'])
+        except (ValidationError, KeyError) as error:
+            logging.error(repr(error))
+            return await query.message.edit_text('Упс.. Что-то пошло не так')
+        text = (f'{data.resort}\n'
+                f'По данным [{current_weather.service}]({current_weather.url})'
+                f' сейчас {current_weather}.')
+        await query.message.edit_text(
+            text,
+            parse_mode='Markdown',
+            disable_web_page_preview=True,
+        )
+
+    if callback_data['answer'] == 'forecast_24h':
+        try:
+            forecast_24h = await get_forecast_24h(
+                coordinates=data['coordinates']
+            )
+            resort_name = data['resort']
+        except (IndexError, KeyError) as error:
+            logging.error(repr(error))
+            return await query.message.edit_text('Упс.. Что-то пошло не так')
+        text = (f'{resort_name}\n'
+                f'По данным [{forecast_24h[12].service}]({forecast_24h[12].url})'  # noqa (E501)
+                f' завтра в {forecast_24h[12].date.strftime("%H:%M")} будет '
+                f'{forecast_24h[12]}.')
+        await query.message.edit_text(
+            text,
+            parse_mode='Markdown',
+            disable_web_page_preview=True,
+        )
+    await state.finish()
+
+
+@dp.callback_query_handler(main_cb.filter(action='weather'), state='*')
+async def weather_handler(
+    query: types.CallbackQuery,
+    callback_data: Dict[str, str],
+    state: FSMContext,
+):
+    """
+    This handler will be called when user sends
+    callback_query with weather action
+    """
+    if callback_data['answer'] == '_':
+        state.finish()
+        return await send_message_with_resorts(query, callback_data['action'])
+
+    resort = await mongo.find_one_resort({'slug': callback_data['answer']})
+    if not resort:
+        logging.error(f'Resort not found. Slug: {callback_data["answer"]}')
+        return await query.message.edit_text('Упс.. что-то пошло не так')
+
+    current_weather = await get_current_weather(resort.coordinates)
+    data = {
+        'resort': resort.name,
+        'coordinates': resort.coordinates,
+        'current_weather': current_weather.dict(),
+    }
+    await state.set_data(data=data)
+
+    markup = types.InlineKeyboardMarkup()
+    for slug, text in weather_actions.items():
+        button = types.InlineKeyboardButton(
+            text.format(temp=f'{current_weather.temp:+.1f} \xb0С'),
+            callback_data=weather_cb.new(
+                action='get_weather',
+                answer=slug,
+            ),
+        )
+        markup.add(button)
+    markup.add(
+        types.InlineKeyboardButton(
+            'Назад',
+            callback_data=main_cb.new(
+                action='weather',
+                answer='_',
+            ),
+        )
+    )
+    await query.message.edit_text(
+        'Выберите действие:',
+        reply_markup=markup,
+    )
+    await WeatherState.waiting_for_weather_action.set()
+
+
+@dp.callback_query_handler(
     main_cb.filter(
-        action=['weather', 'info', 'webcam', 'trail_map', 'coordinates']
+        action=['info', 'webcam', 'trail_map', 'coordinates']
     ),
 )
 async def resort_information_handler(
@@ -346,35 +472,20 @@ async def resort_information_handler(
 ):
     """
     This handler will be called when user sends
-    callback_query with info/webcam/trail_map/coordinates action
+    callback_query with weather/info/webcam/trail_map/coordinates action
     """
 
     action = callback_data['action']
     answer = callback_data['answer']
 
     if answer == '_':
-        resorts = await mongo.find_many_resorts(
-            {action: {'$nin': [None, '', [], {}, False]}},
-        )
-        if len(resorts) == 0:
-            return await query.message.edit_text('Упс.. что-то пошло не так')
-        return await query.message.edit_text(
-            'Выберите место:',
-            reply_markup=get_keyboard_with_resorts(action, resorts),
-        )
+        return await send_message_with_resorts(query, action)
 
     resort = await mongo.find_one_resort({'slug': answer})
     if not resort:
         logging.error(f'Resort not found. Slug: {answer}')
         return await query.message.edit_text('Упс.. что-то пошло не так')
 
-    if action == 'weather':
-        text = f'{resort.name}\n{await get_current_weather(resort.coordinates)}' # noqa (E501)
-        await query.message.edit_text(
-            text,
-            parse_mode='Markdown',
-            disable_web_page_preview=True,
-        )
     if action == 'info':
         await query.message.edit_text(
             resort.get_info(),

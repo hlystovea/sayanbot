@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -32,8 +35,11 @@ class Weather(BaseModel):
     humidity: int
     wind_speed: int
     feels_like: int
+    date: Optional[datetime]
+    service: str
+    url: str
 
-    def current_weather(self):
+    def __str__(self):
         return f'{self.temp:+.1f} \xb0С, {self.wind_speed} м/с, {self.cond}'
 
 
@@ -45,6 +51,12 @@ class Gismeteo(Weather):
         kwargs['humidity'] = kwargs['humidity']['percent']
         kwargs['wind_speed'] = kwargs['wind']['speed']['m_s']
         kwargs['feels_like'] = kwargs['temperature']['comfort']['C']
+        kwargs['service'] = 'Gismeteo'
+        kwargs['url'] = 'https://www.gismeteo.ru/'
+        if kwargs.get('date'):
+            kwargs['date'] = datetime.strptime(
+                kwargs['date']['local'], '%Y-%m-%d %H:%M:%S'
+            )
         super().__init__(**kwargs)
 
 
@@ -57,6 +69,8 @@ class Yandex(Weather):
         kwargs['humidity'] = kwargs['fact']['humidity']
         kwargs['wind_speed'] = kwargs['fact']['wind_speed']
         kwargs['feels_like'] = kwargs['fact']['feels_like']
+        kwargs['service'] = 'Яндекс.Погода'
+        kwargs['url'] = 'https://yandex.ru/pogoda/'
         super().__init__(**kwargs)
 
 
@@ -69,4 +83,6 @@ class OpenWeather(Weather):
         kwargs['humidity'] = kwargs['main']['humidity']
         kwargs['wind_speed'] = kwargs['wind']['speed']
         kwargs['feels_like'] = kwargs['main']['feels_like']
+        kwargs['service'] = 'OpenWeather'
+        kwargs['url'] = 'https://openweathermap.org/'
         super().__init__(**kwargs)

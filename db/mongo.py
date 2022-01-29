@@ -4,14 +4,11 @@ from typing import Dict, List, Optional
 
 from bson import ObjectId
 
-from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic.tools import parse_obj_as
 
 from schema.resort import Resort
 from schema.track import Track
-
-load_dotenv()
 
 
 class MongoDB:
