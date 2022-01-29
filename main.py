@@ -8,14 +8,11 @@ from aiogram.contrib.fsm_storage.mongo import MongoStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils.callback_data import CallbackData
-from dotenv import load_dotenv
 
+from db.mongo import MongoDB
 from schema.resort import Resort
 from schema.track import Track
-from store.mongo import MongoDB
 from utils.weather import get_current_weather
-
-load_dotenv()
 
 
 BOT_TOKEN = environ['BOT_TOKEN']
@@ -46,6 +43,13 @@ logging.basicConfig(
 
 class TrackState(StatesGroup):
     waiting_for_track_save = State()
+    waiting_for_track_name = State()
+    waiting_for_track_region = State()
+    waiting_for_track_description = State()
+
+
+class WheatherState(StatesGroup):
+    waiting_for_weather_action = State()
     waiting_for_track_name = State()
     waiting_for_track_region = State()
     waiting_for_track_description = State()
@@ -357,6 +361,7 @@ async def resort_information_handler(
             {action: {'$nin': [None, '', [], {}, False]}},
         )
         if len(resorts) == 0:
+            logging.error(f'Resorts not found. Action: {action}')
             return await query.message.edit_text('Упс.. что-то пошло не так')
         return await query.message.edit_text(
             'Выберите место:',
