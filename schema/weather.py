@@ -30,11 +30,11 @@ CONDITION = {
 class Weather(BaseModel):
     cond: str
     icon: str
-    temp: int
+    temp: float
     pressure: int
     humidity: int
     wind_speed: int
-    feels_like: int
+    feels_like: float
     date: Optional[datetime]
     service: str
     url: str
