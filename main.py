@@ -375,10 +375,11 @@ async def get_weather_handler(
     if callback_data['answer'] == 'current':
         try:
             current_weather = Weather(**data['current_weather'])
+            resort_name = data['resort']
         except (ValidationError, KeyError) as error:
             logging.error(repr(error))
             return await query.message.edit_text('Упс.. Что-то пошло не так')
-        text = (f'{data.resort}\n'
+        text = (f'{resort_name}\n'
                 f'По данным [{current_weather.service}]({current_weather.url})'
                 f' сейчас {current_weather}.')
         await query.message.edit_text(
