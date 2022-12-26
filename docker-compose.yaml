@@ -3,7 +3,7 @@ version: '3.3'
 services:
   bot:
     image: hlystovea/sayanbot:latest
-    container_name: sayanbot
+    container_name: sayanbot_bot
     restart: always
     command: python3 main.py
     env_file:
@@ -11,7 +11,7 @@ services:
 
   mongodb:
     image: mongo # 4.4.10
-    container_name: mongodb
+    container_name: sayanbot_mongodb
     restart: unless-stopped
     env_file:
       - ./.env
@@ -19,23 +19,11 @@ services:
       - mongodb-data:/data/db
     depends_on:
       - bot
-    ports:
-      - 27017:27017
 
-  mongo-express:
-    image: mongo-express
-    container_name: mongo-express
-    restart: unless-stopped
-    env_file:
-      - ./.env
-    volumes:
-      - mongodb-data:/data/db
-    links:
-      - mongodb
-    depends_on:
-      - mongodb
-    ports:
-      - 8081:8081
+networks:
+  default:
+    name: sayanbot_network
+    driver: bridge
 
 volumes:
   mongodb-data:
