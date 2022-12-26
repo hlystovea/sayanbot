@@ -77,7 +77,7 @@ jobs:
             cd sayanbot
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/sayanbot:latest
             sudo docker-compose stop
-            sudo docker-compose rm sayanbot
+            sudo docker-compose rm sayanbot_bot -f
             echo BOT_TOKEN=${{ secrets.BOT_TOKEN }} > .env
             echo GIS_TOKEN=${{ secrets.GIS_TOKEN }} >> .env
             echo YA_TOKEN=${{ secrets.YA_TOKEN }} >> .env
@@ -91,7 +91,7 @@ jobs:
             echo ME_CONFIG_MONGODB_ADMINPASSWORD=${{ secrets.ME_CONFIG_MONGODB_ADMINPASSWORD }} >> .env
             echo ME_CONFIG_BASICAUTH_USERNAME=${{ secrets.ME_CONFIG_BASICAUTH_USERNAME }} >> .env
             echo ME_CONFIG_BASICAUTH_PASSWORD=${{ secrets.ME_CONFIG_BASICAUTH_PASSWORD }} >> .env
-            sudo docker-compose up -d
+            sudo docker-compose up -d --build
 
   send_message:
     runs-on: ubuntu-latest
