@@ -42,7 +42,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/sayanbot:latest
+          tags: ${{ secrets.DOCKER_HUB }}/sayanbot:latest
 
   copy_configs:
     runs-on: ubuntu-latest
