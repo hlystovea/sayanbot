@@ -35,6 +35,7 @@ jobs:
       - name: Login to Docker 
         uses: docker/login-action@v2
         with:
+          registry: ${{ secrets.DOCKER_HUB }}
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Push to Docker Hub
@@ -75,7 +76,8 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
             cd sayanbot
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/sayanbot:latest
+            sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} ${{ secrets.DOCKER_HUB }}
+            sudo docker pull ${{ secrets.DOCKER_HUB }}/sayanbot:latest
             sudo docker-compose stop
             sudo docker-compose rm sayanbot_bot -f
             echo BOT_TOKEN=${{ secrets.BOT_TOKEN }} > .env
@@ -91,7 +93,8 @@ jobs:
             echo ME_CONFIG_MONGODB_ADMINPASSWORD=${{ secrets.ME_CONFIG_MONGODB_ADMINPASSWORD }} >> .env
             echo ME_CONFIG_BASICAUTH_USERNAME=${{ secrets.ME_CONFIG_BASICAUTH_USERNAME }} >> .env
             echo ME_CONFIG_BASICAUTH_PASSWORD=${{ secrets.ME_CONFIG_BASICAUTH_PASSWORD }} >> .env
-            sudo docker-compose up -d --build
+            echo DOCKER_HUB=${{ secrets.DOCKER_HUB }} >> .env
+            sudo docker-compose up -d
 
   send_message:
     runs-on: ubuntu-latest
