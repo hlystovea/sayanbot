@@ -49,7 +49,7 @@ async def get_session(host: str) -> ClientSession:
     if session is not None and not session.closed:
         return session
 
-    session = ClientSession(headers=HOSTS[host])
+    session = ClientSession(headers=HOSTS[host]['headers'])
     _sessions[host] = session
 
     return session
@@ -63,7 +63,7 @@ async def gismeteo_current(coordinates: tuple[float, float]) -> Gismeteo | None:
     }
     params |= HOSTS['gismeteo']['params']
 
-    session = _sessions['gismeteo']
+    session = await get_session('gismeteo')
 
     async with session.get(url=url, params=params, ssl=False) as r:
         if r.status == 200:
@@ -82,7 +82,7 @@ async def yandex_current(coordinates: tuple[float, float]) -> Yandex | None:
     }
     params |= HOSTS['yandex']['params']
 
-    session = _sessions['yandex']
+    session = await get_session('yandex')
 
     async with session.get(url=url, params=params, ssl=False) as r:
         if r.status == 200:
@@ -101,7 +101,7 @@ async def openweather_current(coordinates: tuple[float, float]) -> OpenWeather |
     }
     params |= HOSTS['openweather']['params']
 
-    session = _sessions['openweather']
+    session = await get_session('openweather')
 
     async with session.get(url=url, params=params, ssl=False) as r:
         if r.status == 200:
@@ -121,7 +121,7 @@ async def gismeteo_forecast(coordinates: tuple[float, float], days: int) -> list
     }
     params |= HOSTS['gismeteo']['params']
 
-    session = _sessions['gismeteo']
+    session = await get_session('gismeteo')
 
     async with session.get(url=url, params=params, ssl=False) as r:
         if r.status == 200:

@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from aiogram import Dispatcher
 from aiogram.dispatcher import FSMContext
@@ -6,8 +7,8 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import CallbackQuery
 from pydantic import ValidationError
 
-from bot.handlers.core import send_message_with_resorts
-from bot.markups import get_forecast_keyboard, main_cb, weather_cb
+from bot.common import send_message_with_resorts
+from bot.markups import get_forecast_keyboard, main_cb, resort_cb, weather_cb
 from db.mongo import mongo
 from schema.weather import Weather
 from utils.weather import get_current_weather, get_forecast_24h
@@ -19,30 +20,49 @@ class WeatherState(StatesGroup):
 
 def register_weather_handlers(dp: Dispatcher):
     dp.register_callback_query_handler(
-        weather_handler,
+        entry_point,
         main_cb.filter(action='weather'),
+        state='*'
+    )
+    dp.register_callback_query_handler(
+        weather_handler,
+        resort_cb.filter(action='weather'),
         state='*'
     )
     dp.register_callback_query_handler(
         forecast_handler,
         weather_cb.filter(action='forecast'),
-        state=WeatherState.waiting_for_weather_action,
+        state=WeatherState.waiting_for_weather_action
     )
+    dp.register_callback_query_handler(
+        entry_point,
+        weather_cb.filter(action='back'),
+        state=WeatherState.waiting_for_weather_action
+    )
+
+
+async def entry_point(
+    query: CallbackQuery,
+    callback_data: dict[str, str],
+    state: FSMContext
+):
+    """
+    This handler will be called first when the user
+    sends a callback with the `weather` or `back` action
+    """
+    await state.finish()
+    await send_message_with_resorts(query, 'weather')
 
 
 async def weather_handler(
     query: CallbackQuery,
     callback_data: dict[str, str],
-    state: FSMContext,
+    state: FSMContext
 ):
     """
-    This handler will be called when user sends
-    callback_query with weather action
+    This handler will be called when user sends callback with `weather` action
     """
-    if callback_data['answer'] == '_':
-        await state.finish()
-        return await send_message_with_resorts(query, callback_data['action'])
-
+    await state.finish()
     resort = await mongo.find_one_resort({'slug': callback_data['answer']})
 
     if not resort:
@@ -50,6 +70,11 @@ async def weather_handler(
         return await query.message.edit_text('Упс.. что-то пошло не так')
 
     current_weather = await get_current_weather(resort.coordinates)
+
+    if not current_weather:
+        return await query.message.edit_text(
+            'Сервис погоды не доступен, попробуйте позднее'
+        )
 
     data = {
         'resort': resort.name,
@@ -61,56 +86,68 @@ async def weather_handler(
 
     await query.message.edit_text(
         'Выберите действие:',
-        reply_markup=await get_forecast_keyboard(current_weather),
+        reply_markup=get_forecast_keyboard(current_weather),
     )
 
     await WeatherState.waiting_for_weather_action.set()
 
 
+async def send_current_weather(query: CallbackQuery, data: dict[str, Any]):
+    try:
+        current_weather = Weather(**data['current_weather'])
+        resort_name = data['resort']
+
+        text = (f'{resort_name}\nПо данным '
+                f'[{current_weather.service}]({current_weather.url}) '
+                f'сейчас {current_weather}.')
+
+    except (AttributeError, KeyError, ValidationError) as error:
+        logging.error(repr(error))
+        return await query.message.edit_text('Упс.. Что-то пошло не так')
+
+    await query.message.edit_text(
+        text,
+        parse_mode='Markdown',
+        disable_web_page_preview=True,
+    )
+
+
+async def send_forecast_24h(query: CallbackQuery, data: dict[str, Any]):
+    try:
+        forecast_24h = await get_forecast_24h(coordinates=data['coordinates'])
+        resort_name = data['resort']
+
+        text = (f'{resort_name}\nПо данным '
+                f'[{forecast_24h[12].service}]({forecast_24h[12].url}) '
+                f'завтра в {forecast_24h[12].date.strftime("%H:%M")} будет '
+                f'{forecast_24h[12]}.')
+
+    except (AttributeError, IndexError, KeyError) as error:
+        logging.error(repr(error))
+        return await query.message.edit_text('Упс.. Что-то пошло не так')
+
+    await query.message.edit_text(
+        text,
+        parse_mode='Markdown',
+        disable_web_page_preview=True
+    )
+
+
 async def forecast_handler(
     query: CallbackQuery,
     callback_data: dict[str, str],
-    state: FSMContext,
+    state: FSMContext
 ):
     """
     This handler will be called when the user sets
-    the waiting_for_weather_action state
+    the `waiting_for_weather_action` state
     """
     data = await state.get_data()
 
-    if callback_data['answer'] == 'current':
-        try:
-            current_weather = Weather(**data['current_weather'])
-            resort_name = data['resort']
-        except (ValidationError, KeyError) as error:
-            logging.error(repr(error))
-            return await query.message.edit_text('Упс.. Что-то пошло не так')
-        text = (f'{resort_name}\n'
-                f'По данным [{current_weather.service}]({current_weather.url})'
-                f' сейчас {current_weather}.')
-        await query.message.edit_text(
-            text,
-            parse_mode='Markdown',
-            disable_web_page_preview=True,
-        )
-
-    if callback_data['answer'] == 'forecast_24h':
-        try:
-            forecast_24h = await get_forecast_24h(
-                coordinates=data['coordinates']
-            )
-            resort_name = data['resort']
-        except (IndexError, KeyError) as error:
-            logging.error(repr(error))
-            return await query.message.edit_text('Упс.. Что-то пошло не так')
-        text = (f'{resort_name}\n'
-                f'По данным [{forecast_24h[12].service}]({forecast_24h[12].url})'  # noqa (E501)
-                f' завтра в {forecast_24h[12].date.strftime("%H:%M")} будет '
-                f'{forecast_24h[12]}.')
-        await query.message.edit_text(
-            text,
-            parse_mode='Markdown',
-            disable_web_page_preview=True,
-        )
+    match callback_data['answer']:  # noqa(E999)
+        case 'current':
+            await send_current_weather(query, data)
+        case 'forecast_24h':
+            await send_forecast_24h(query, data)
 
     await state.finish()

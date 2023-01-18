@@ -22,6 +22,7 @@ FORECAST_BUTTONS = {
 
 
 main_cb = CallbackData('main', 'action', 'answer')
+resort_cb = CallbackData('resort', 'action', 'answer')
 track_cb = CallbackData('track', 'action', 'answer')
 weather_cb = CallbackData('weather', 'action', 'answer')
 
@@ -32,7 +33,7 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
     for action, text in MAIN_MENU_BUTTONS.items():
         button = InlineKeyboardButton(
             text,
-            callback_data=main_cb.new(action=action, answer='_'),
+            callback_data=main_cb.new(action=action, answer='_')
         )
         markup.add(button)
 
@@ -40,16 +41,20 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
 
 
 def get_keyboard_with_resorts(
-    callback: CallbackData, action: str, resorts: list[Resort]
+    action: str,
+    resorts: list[Resort],
+    back_button: CallbackData | None = None
 ) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
 
     for resort in resorts:
         button = InlineKeyboardButton(
             resort.name,
-            callback_data=callback.new(action=action, answer=resort.slug),
+            callback_data=resort_cb.new(action=action, answer=resort.slug)
         )
         markup.add(button)
+
+    callback = back_button if back_button else resort_cb
 
     markup.add(
         InlineKeyboardButton(
@@ -74,7 +79,7 @@ def get_forecast_keyboard(weather: Weather) -> InlineKeyboardMarkup:
     markup.add(
         InlineKeyboardButton(
             'Назад',
-            callback_data=main_cb.new(action='weather', answer='_')
+            callback_data=weather_cb.new(action='back', answer='_')
         )
     )
 
@@ -87,11 +92,11 @@ def get_track_save_keyboard() -> InlineKeyboardMarkup:
     markup.row(
         InlineKeyboardButton(
             'Да',
-            callback_data=track_cb.new(action='save', answer='yes'),
+            callback_data=track_cb.new(action='save_track', answer='yes')
         ),
         InlineKeyboardButton(
             'Нет',
-            callback_data=track_cb.new(action='save', answer='no'),
+            callback_data=track_cb.new(action='save_track', answer='no')
         ),
     )
 
@@ -105,10 +110,17 @@ def get_keyboard_with_tracks(tracks) -> InlineKeyboardMarkup:
         button = InlineKeyboardButton(
             track.name,
             callback_data=track_cb.new(
-                action='track_choice',
-                answer=track.unique_id,
+                action='tracks',
+                answer=track.unique_id
             )
         )
         markup.add(button)
+
+    markup.add(
+        InlineKeyboardButton(
+            'Назад',
+            callback_data=track_cb.new(action='back', answer='_')
+        )
+    )
 
     return markup

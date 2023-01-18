@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from pydantic import AnyHttpUrl, BaseModel
 
 
@@ -16,13 +14,13 @@ class ResortInfo(BaseModel):
 class Resort(BaseModel):
     name: str
     slug: str
-    coordinates: List[float]
+    coordinates: tuple[float, float]
     weather: bool
-    phone: Optional[str]
-    url: Optional[AnyHttpUrl]
-    webcam: Optional[AnyHttpUrl]
-    trail_map: Optional[str]
-    info: Optional[ResortInfo]
+    phone: str | None
+    url: AnyHttpUrl | None
+    webcam: AnyHttpUrl | None
+    trail_map: str | None
+    info: ResortInfo | None
 
     def get_info(self):
         return (

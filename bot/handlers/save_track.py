@@ -1,11 +1,10 @@
 from aiogram import Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.types import (CallbackQuery, File, InlineKeyboardButton,
-                           InlineKeyboardMarkup, Message)
+from aiogram.types import CallbackQuery, Message
 
-from bot.markups import (get_keyboard_with_resorts, get_keyboard_with_tracks,
-                         get_track_save_keyboard, main_cb, track_cb)
+from bot.markups import (get_keyboard_with_resorts, get_track_save_keyboard,
+                         resort_cb, track_cb)
 from db.mongo import mongo
 from logger import logger
 from schema.track import Track
@@ -18,55 +17,67 @@ class TrackState(StatesGroup):
     waiting_for_track_description = State()
 
 
-def register_track_handlers(dp: Dispatcher):
-    dp.register_message_handler(track_file_handler, content_types=['document'], state='*')
-    dp.register_message_handler(set_track_name, state=TrackState.waiting_for_track_name)
-    dp.register_message_handler(set_track_description, state=TrackState.waiting_for_track_description)
+def register_save_track_handlers(dp: Dispatcher):
+    dp.register_message_handler(
+        entry_point,
+        content_types=['document'],
+        state='*'
+    )
     dp.register_callback_query_handler(
         save_track_handler,
-        track_cb.filter(action='save'),
-        state=TrackState.waiting_for_track_save,
+        track_cb.filter(action='save_track'),
+        state=TrackState.waiting_for_track_save
     )
     dp.register_callback_query_handler(
         set_track_region,
-        track_cb.filter(action='region'),
-        state=TrackState.waiting_for_track_region,
+        resort_cb.filter(action='save_track'),
+        state=TrackState.waiting_for_track_region
     )
     dp.register_callback_query_handler(
-        get_track_handler,
-        main_cb.filter(action='tracks')
+        back_button_handler,
+        track_cb.filter(action='back'),
+        state=TrackState.waiting_for_track_region
     )
-    dp.register_callback_query_handler(
-        region_choice_handler,
-        track_cb.filter(action='region_choice')
+    dp.register_message_handler(
+        set_track_name,
+        state=TrackState.waiting_for_track_name
     )
-    dp.register_callback_query_handler(
-        track_choice_handler,
-        track_cb.filter(action='track_choice')
+    dp.register_message_handler(
+        set_track_description,
+        state=TrackState.waiting_for_track_description
     )
 
 
-async def track_file_handler(message: File, state: FSMContext):
+async def add_file_info_to_state(message: Message, state: FSMContext):
+    await state.finish()
+
+    track = {
+        'file_id': message.document.file_id,
+        'unique_id': message.document.file_unique_id,
+        'name': message.document.file_name,
+        'size': message.document.file_size,
+        'chat_id': message.chat.id,
+    }
+
+    await state.set_data(data=track)
+
+
+async def entry_point(message: Message, state: FSMContext):
     """
     This handler will be called when the user sends a file
     """
     if message.document.file_name.split('.')[-1] == 'gpx':
-        track = {
-            'file_id': message.document.file_id,
-            'unique_id': message.document.file_unique_id,
-            'name': message.document.file_name,
-            'size': message.document.file_size,
-            'chat_id': message.chat.id,
-        }
-        await state.set_data(data=track)
+        await add_file_info_to_state(message, state)
 
         text = ('Добавить этот трек в список маршрутов? '
                 'Он будет виден только в этом чате.')
+
         await message.reply(
             text,
             reply_markup=get_track_save_keyboard(),
             disable_notification=True
         )
+
         await TrackState.waiting_for_track_save.set()
 
 
@@ -79,7 +90,7 @@ async def save_track_handler(
     This handler will be called when the user sets
     the waiting_for_track_save state
     """
-    match callback_data['answer']:
+    match callback_data['answer']:  # noqa(E999)
         case 'no':
             await state.finish()
             return await query.bot.delete_message(
@@ -89,12 +100,14 @@ async def save_track_handler(
 
         case 'yes':
             resorts = await mongo.find_many_resorts(
-                    {'info': {'$nin': [None, '', [], {}]}}
-                )
+                {'info': {'$nin': [None, '', [], {}]}}
+            )
 
             await query.message.edit_text(
                 'Укажите регион катания:',
-                reply_markup=get_keyboard_with_resorts(track_cb, 'region', resorts)
+                reply_markup=get_keyboard_with_resorts(
+                    callback_data['action'], resorts, track_cb
+                )
             )
             await TrackState.waiting_for_track_region.set()
 
@@ -154,9 +167,11 @@ async def set_track_description(message: Message, state: FSMContext):
 
     try:
         await mongo.insert_track(Track(**data))
+
     except Exception as error:
         logger.error(repr(error))
         await message.answer('Упс.. что-то пошло не так')
+
     else:
         await message.bot.edit_message_text(
             'Маршрут добавлен.',
@@ -164,79 +179,20 @@ async def set_track_description(message: Message, state: FSMContext):
             message_id=data['parent_message_id']
         )
         await message.delete()
-    finally:
-        await state.finish()
+
+    await state.finish()
 
 
-async def get_track_handler(
+async def back_button_handler(
     query: CallbackQuery,
     callback_data: dict[str, str]
 ):
     """
-    This handler will be called when user sends
-    callback_query with tracks action
+    This handler will be called when user sends callback with back action
     """
-    tracks = await mongo.find_many_tracks({'chat_id': query.message.chat.id})
+    text = ('Добавить этот трек в список маршрутов? '
+            'Он будет виден только в этом чате.')
 
-    if len(tracks) == 0:
-        return await query.message.edit_text(
-            'Список маршрутов пуст. Вы можете загрузить свой маршрут '
-            'отправив gpx файл в этот чат.'
-        )
+    await query.message.edit_text(text, reply_markup=get_track_save_keyboard())
 
-    regions = [track.region for track in tracks]
-    resorts = await mongo.find_many_resorts({'slug': {'$in': regions}})
-
-    await query.message.edit_text(
-        'Выберите район катания:',
-        reply_markup=get_keyboard_with_resorts(track_cb, 'region_choice', resorts)
-    )
-
-
-async def region_choice_handler(
-    query: CallbackQuery,
-    callback_data: dict[str, str]
-):
-    """
-    This handler will be called when user sends
-    callback_query region_choice action
-    """
-    tracks = await mongo.find_many_tracks(
-        {
-            'region': callback_data['answer'],
-            'chat_id': query.message.chat.id,
-        }
-    )
-
-    await query.message.edit_text(
-        'Выберите маршрут:',
-        reply_markup=get_keyboard_with_tracks(tracks)
-    )
-
-
-async def track_choice_handler(
-    query: CallbackQuery,
-    callback_data: dict[str, str]
-):
-    """
-    This handler will be called when user sends
-    callback_query track_choice action
-    """
-    track = await mongo.find_one_track(
-        {
-            'unique_id': callback_data['answer'],
-            'chat_id': query.message.chat.id,
-        }
-    )
-
-    if track is None:
-        logger.error(f'Track not found: unique_id {callback_data["answer"]}')
-        return await query.message.edit_text('Упс.. Что-то пошло не так')
-
-    await query.message.answer_document(
-        track.file_id,
-        caption=f'*{track.name}:*\n{track.description}',
-        disable_notification=True,
-        parse_mode='Markdown'
-    )
-    await query.message.delete()
+    await TrackState.waiting_for_track_save.set()
