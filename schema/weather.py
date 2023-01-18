@@ -79,7 +79,7 @@ class OpenWeather(Weather):
         kwargs['cond'] = kwargs['weather'][0]['description']
         kwargs['icon'] = kwargs['weather'][0]['icon']
         kwargs['temp'] = kwargs['main']['temp']
-        kwargs['pressure'] = 0.75006376*kwargs['main']['pressure']
+        kwargs['pressure'] = 0.75006376 * kwargs['main']['pressure']
         kwargs['humidity'] = kwargs['main']['humidity']
         kwargs['wind_speed'] = kwargs['wind']['speed']
         kwargs['feels_like'] = kwargs['main']['feels_like']
