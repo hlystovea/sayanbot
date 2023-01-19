@@ -7,7 +7,7 @@ from bot.markups import (get_keyboard_with_resorts, get_track_save_keyboard,
                          resort_cb, track_cb)
 from db.mongo import mongo
 from logger import logger
-from schema.track import Track
+from schemes.track import Track
 
 
 class TrackState(StatesGroup):

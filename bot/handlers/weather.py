@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from bot.common import send_message_with_resorts
 from bot.markups import get_forecast_keyboard, main_cb, resort_cb, weather_cb
 from db.mongo import mongo
-from schema.weather import Weather
+from schemes.weather import Weather
 from utils.weather import get_current_weather, get_forecast_24h
 
 

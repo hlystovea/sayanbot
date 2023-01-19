@@ -5,7 +5,7 @@ from bot.common import send_message_with_resorts
 from bot.markups import main_cb, resort_cb
 from db.mongo import mongo
 from logger import logger
-from schema.resort import Resort
+from schemes.resort import Resort
 
 INFO_CMD = [
     'info',

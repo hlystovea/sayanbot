@@ -1,8 +1,8 @@
 from aiogram.utils.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-from schema.resort import Resort
-from schema.weather import Weather
+from schemes.resort import Resort
+from schemes.weather import Weather
 
 
 MAIN_MENU_BUTTONS = {

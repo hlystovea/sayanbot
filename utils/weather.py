@@ -5,7 +5,7 @@ from aiohttp import ClientSession, ContentTypeError
 from pydantic import parse_obj_as, ValidationError
 
 from logger import logger
-from schema.weather import Gismeteo, OpenWeather, Weather, Yandex
+from schemes.weather import Gismeteo, OpenWeather, Weather, Yandex
 
 
 HOSTS = {
