@@ -62,13 +62,13 @@ class Gismeteo(Weather):
 
 class Yandex(Weather):
     def __init__(self, **kwargs):
-        kwargs['cond'] = CONDITION[kwargs['fact']['condition']]
-        kwargs['icon'] = kwargs['fact']['icon']
-        kwargs['temp'] = kwargs['fact']['temp']
-        kwargs['pressure'] = kwargs['fact']['pressure_mm']
-        kwargs['humidity'] = kwargs['fact']['humidity']
-        kwargs['wind_speed'] = kwargs['fact']['wind_speed']
-        kwargs['feels_like'] = kwargs['fact']['feels_like']
+        kwargs['cond'] = CONDITION[kwargs['condition']]
+        kwargs['icon'] = kwargs['icon']
+        kwargs['temp'] = kwargs['temp']
+        kwargs['pressure'] = kwargs['pressure_mm']
+        kwargs['humidity'] = kwargs['humidity']
+        kwargs['wind_speed'] = kwargs['wind_speed']
+        kwargs['feels_like'] = kwargs['feels_like']
         kwargs['service'] = 'Яндекс.Погода'
         kwargs['url'] = 'https://yandex.ru/pogoda/'
         super().__init__(**kwargs)

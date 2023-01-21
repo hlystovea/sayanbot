@@ -11,7 +11,7 @@ from bot.common import send_message_with_resorts
 from bot.markups import get_forecast_keyboard, main_cb, resort_cb, weather_cb
 from db.mongo import mongo
 from schemes.weather import Weather
-from utils.weather import get_current_weather, get_forecast_24h
+from utils.weather.weather import get_current_weather, get_forecast
 
 
 class WeatherState(StatesGroup):
@@ -114,13 +114,15 @@ async def send_current_weather(query: CallbackQuery, data: dict[str, Any]):
 
 async def send_forecast_24h(query: CallbackQuery, data: dict[str, Any]):
     try:
-        forecast_24h = await get_forecast_24h(coordinates=data['coordinates'])
-        resort_name = data['resort']
+        forecast = await get_forecast(coordinates=data['coordinates'])
 
-        text = (f'{resort_name}\nПо данным '
-                f'[{forecast_24h[12].service}]({forecast_24h[12].url}) '
-                f'завтра в {forecast_24h[12].date.strftime("%H:%M")} будет '
-                f'{forecast_24h[12]}.')
+        if not forecast:
+            return await query.message.edit_text('Сервис погоды недоступен')
+
+        text = (f'{data["resort"]}\nПо данным '
+                f'[{forecast[12].service}]({forecast[12].url}) '
+                f'завтра в {forecast[12].date.strftime("%H:%M")} будет '
+                f'{forecast[12]}.')
 
     except (AttributeError, IndexError, KeyError) as error:
         logging.error(repr(error))
