@@ -12,7 +12,7 @@ yandex = YandexWeatherProvider(token=environ['YA_TOKEN'])
 openweather = OpenWeatherProvider(token=environ['OP_TOKEN'])
 
 
-async def get_current_weather(coordinates: tuple[float, float]) -> Weather | None:
+async def get_current_weather(coordinates: tuple[float, float]) -> Weather | None:  # noqa(E501)
     results = await asyncio.gather(
         gismeteo.current_weather(*coordinates),
         yandex.current_weather(*coordinates),
@@ -21,7 +21,7 @@ async def get_current_weather(coordinates: tuple[float, float]) -> Weather | Non
     return results[0] or results[1] or results[2]
 
 
-async def get_forecast(coordinates: tuple[float, float], days: int = 2) -> list[Gismeteo] | None:
+async def get_forecasts(coordinates: tuple[float, float], days: int = 3) -> list[Gismeteo] | None:  # noqa(E501)
     return await gismeteo.forecast(*coordinates, days)
 
 

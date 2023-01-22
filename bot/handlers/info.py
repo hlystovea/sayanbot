@@ -1,7 +1,7 @@
 from aiogram import Dispatcher
 from aiogram.types import CallbackQuery
 
-from bot.common import send_message_with_resorts
+from bot.common import MSG, send_message_with_resorts
 from bot.markups import main_cb, resort_cb
 from db.mongo import mongo
 from logger import logger
@@ -67,7 +67,7 @@ async def send_message_with_info(
                     await query.message.delete()
             except FileNotFoundError as error:
                 logger.error(repr(error))
-                await query.message.edit_text('Упс.. что-то пошло не так')
+                await query.message.edit_text(MSG.error)
 
         case 'coordinates':
             await query.message.answer_venue(
@@ -81,7 +81,7 @@ async def send_message_with_info(
 
         case _:
             logger.error(f'Unknown action: {action}')
-            await query.message.edit_text('Упс.. что-то пошло не так')
+            await query.message.edit_text(MSG.error)
 
 
 async def resort_information_handler(
@@ -99,6 +99,6 @@ async def resort_information_handler(
 
     if not resort:
         logger.error(f'Resort not found. Slug: {answer}')
-        return await query.message.edit_text('Упс.. что-то пошло не так')
+        return await query.message.edit_text(MSG.error)
 
     await send_message_with_info(query, action, resort)

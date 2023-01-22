@@ -84,7 +84,7 @@ class GismeteoWeatherProvider(WeatherProviderMixin):
         data = await self.get_data(url, latitude, longitude)
         return Gismeteo(**data['response']) if data else None
 
-    async def forecast(self, latitude: float, longitude: float, days: int) -> list[Gismeteo] | None:  # noqa(E501)
+    async def forecast(self, latitude: float, longitude: float, days: int = 3) -> list[Gismeteo] | None:  # noqa(E501)
         url = GISMETEO_API_URL + 'forecast/'
         data = await self.get_data(url, latitude, longitude, days=days)
         return parse_obj_as(list[Gismeteo], data['response']) if data else None
