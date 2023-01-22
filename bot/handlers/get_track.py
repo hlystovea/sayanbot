@@ -1,6 +1,7 @@
 from aiogram import Dispatcher
 from aiogram.types import CallbackQuery
 
+from bot.common import MSG
 from bot.markups import (get_keyboard_with_resorts, get_keyboard_with_tracks,
                          main_cb, resort_cb, track_cb)
 from db.mongo import mongo
@@ -37,16 +38,13 @@ async def entry_point(
     tracks = await mongo.find_many_tracks({'chat_id': query.message.chat.id})
 
     if len(tracks) == 0:
-        return await query.message.edit_text(
-            'Список маршрутов пуст. Вы можете загрузить свой маршрут '
-            'отправив gpx файл в этот чат.'
-        )
+        return await query.message.edit_text(MSG.track_list_empty)
 
     regions = [track.region for track in tracks]
     resorts = await mongo.find_many_resorts({'slug': {'$in': regions}})
 
     await query.message.edit_text(
-        'Выберите район катания:',
+        MSG.choose_track_region,
         reply_markup=get_keyboard_with_resorts('tracks', resorts)
     )
 
@@ -66,7 +64,7 @@ async def region_choice_handler(
     )
 
     await query.message.edit_text(
-        'Выберите маршрут:',
+        MSG.choose_track,
         reply_markup=get_keyboard_with_tracks(tracks)
     )
 
@@ -87,7 +85,7 @@ async def track_choice_handler(
 
     if track is None:
         logger.error(f'Track not found: unique_id {callback_data["answer"]}')
-        return await query.message.edit_text('Упс.. Что-то пошло не так')
+        return await query.message.edit_text(MSG.error)
 
     await query.message.answer_document(
         track.file_id,

@@ -3,11 +3,15 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
+from bot.common import MSG
 from bot.markups import (get_keyboard_with_resorts, get_track_save_keyboard,
                          resort_cb, track_cb)
 from db.mongo import mongo
 from logger import logger
-from schema.track import Track
+from schemes.track import Track
+
+
+MAX_TRACK_NAME_LENGHT = 40
 
 
 class TrackState(StatesGroup):
@@ -69,11 +73,8 @@ async def entry_point(message: Message, state: FSMContext):
     if message.document.file_name.split('.')[-1] == 'gpx':
         await add_file_info_to_state(message, state)
 
-        text = ('Добавить этот трек в список маршрутов? '
-                'Он будет виден только в этом чате.')
-
         await message.reply(
-            text,
+            MSG.save_new_track_question,
             reply_markup=get_track_save_keyboard(),
             disable_notification=True
         )
@@ -104,7 +105,7 @@ async def save_track_handler(
             )
 
             await query.message.edit_text(
-                'Укажите регион катания:',
+                MSG.choose_track_region,
                 reply_markup=get_keyboard_with_resorts(
                     callback_data['action'], resorts, track_cb
                 )
@@ -125,9 +126,7 @@ async def set_track_region(
         region=callback_data['answer'],
         parent_message_id=query.message.message_id
     )
-    await query.message.edit_text(
-        'Введите название маршрута. Например, "Ски-тур вокруг Боруса":'
-    )
+    await query.message.edit_text(MSG.input_track_name)
     await TrackState.waiting_for_track_name.set()
 
 
@@ -136,19 +135,17 @@ async def set_track_name(message: Message, state: FSMContext):
     This handler will be called when the user sets
     the waiting_for_track_name state
     """
-    if len(message.text) > 40:
+    if len(message.text) > MAX_TRACK_NAME_LENGHT:
         return await message.reply(
-            'Название не должно быть длинее 40 cимволов',
+            MSG.max_name_lenght.format(MAX_TRACK_NAME_LENGHT),
             disable_notification=True
         )
 
     await state.update_data(name=message.text)
     data = await state.get_data()
 
-    text = ('Введите описание маршрута. Например, '
-            '"24 км на лыжах вокруг хребта Борус (12.02.2021)":')
     await message.bot.edit_message_text(
-        text,
+        MSG.input_track_description,
         chat_id=message.chat.id,
         message_id=data['parent_message_id']
     )
@@ -170,11 +167,11 @@ async def set_track_description(message: Message, state: FSMContext):
 
     except Exception as error:
         logger.error(repr(error))
-        await message.answer('Упс.. что-то пошло не так')
+        await message.answer(MSG.error)
 
     else:
         await message.bot.edit_message_text(
-            'Маршрут добавлен.',
+            MSG.saved,
             message.chat.id,
             message_id=data['parent_message_id']
         )
@@ -190,9 +187,9 @@ async def back_button_handler(
     """
     This handler will be called when user sends callback with back action
     """
-    text = ('Добавить этот трек в список маршрутов? '
-            'Он будет виден только в этом чате.')
-
-    await query.message.edit_text(text, reply_markup=get_track_save_keyboard())
+    await query.message.edit_text(
+        MSG.save_new_track_question,
+        reply_markup=get_track_save_keyboard()
+    )
 
     await TrackState.waiting_for_track_save.set()

@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 
 from aiogram import Dispatcher
@@ -7,11 +6,12 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import CallbackQuery
 from pydantic import ValidationError
 
-from bot.common import send_message_with_resorts
+from bot.common import MSG, send_message_with_resorts
 from bot.markups import get_forecast_keyboard, main_cb, resort_cb, weather_cb
 from db.mongo import mongo
-from schema.weather import Weather
-from utils.weather import get_current_weather, get_forecast_24h
+from logger import logger
+from schemes.weather import Weather
+from utils.weather.weather import get_current_weather, get_forecasts
 
 
 class WeatherState(StatesGroup):
@@ -66,15 +66,14 @@ async def weather_handler(
     resort = await mongo.find_one_resort({'slug': callback_data['answer']})
 
     if not resort:
-        logging.error(f'Resort not found. Slug: {callback_data["answer"]}')
-        return await query.message.edit_text('Упс.. что-то пошло не так')
+        logger.error(f'Resort not found. Slug: {callback_data["answer"]}')
+        return await query.message.edit_text(MSG.error)
 
     current_weather = await get_current_weather(resort.coordinates)
 
     if not current_weather:
-        return await query.message.edit_text(
-            'Сервис погоды не доступен, попробуйте позднее'
-        )
+        logger.error('The weather forecast service is not available')
+        return await query.message.edit_text(MSG.service_unavailable)
 
     data = {
         'resort': resort.name,
@@ -85,7 +84,7 @@ async def weather_handler(
     await state.set_data(data=data)
 
     await query.message.edit_text(
-        'Выберите действие:',
+        MSG.choose_command,
         reply_markup=get_forecast_keyboard(current_weather),
     )
 
@@ -95,15 +94,17 @@ async def weather_handler(
 async def send_current_weather(query: CallbackQuery, data: dict[str, Any]):
     try:
         current_weather = Weather(**data['current_weather'])
-        resort_name = data['resort']
 
-        text = (f'{resort_name}\nПо данным '
-                f'[{current_weather.service}]({current_weather.url}) '
-                f'сейчас {current_weather}.')
+        text = MSG.current_weather.format(
+            data['resort'],
+            current_weather.service,
+            current_weather.url,
+            current_weather
+        )
 
     except (AttributeError, KeyError, ValidationError) as error:
-        logging.error(repr(error))
-        return await query.message.edit_text('Упс.. Что-то пошло не так')
+        logger.error(repr(error))
+        return await query.message.edit_text(MSG.error)
 
     await query.message.edit_text(
         text,
@@ -112,19 +113,24 @@ async def send_current_weather(query: CallbackQuery, data: dict[str, Any]):
     )
 
 
-async def send_forecast_24h(query: CallbackQuery, data: dict[str, Any]):
+async def send_24h_forecast(query: CallbackQuery, data: dict[str, Any]):
     try:
-        forecast_24h = await get_forecast_24h(coordinates=data['coordinates'])
-        resort_name = data['resort']
+        forecasts = await get_forecasts(coordinates=data['coordinates'])
 
-        text = (f'{resort_name}\nПо данным '
-                f'[{forecast_24h[12].service}]({forecast_24h[12].url}) '
-                f'завтра в {forecast_24h[12].date.strftime("%H:%M")} будет '
-                f'{forecast_24h[12]}.')
+        if not forecasts:
+            return await query.message.edit_text(MSG.service_unavailable)
+
+        text = MSG.forecast.format(
+            data['resort'],
+            forecasts[12].service,
+            forecasts[12].url,
+            forecasts[12].date.strftime('%H:%M') if forecasts[12].date else '',
+            forecasts[12]
+        )
 
     except (AttributeError, IndexError, KeyError) as error:
-        logging.error(repr(error))
-        return await query.message.edit_text('Упс.. Что-то пошло не так')
+        logger.error(repr(error))
+        return await query.message.edit_text(MSG.error)
 
     await query.message.edit_text(
         text,
@@ -148,6 +154,6 @@ async def forecast_handler(
         case 'current':
             await send_current_weather(query, data)
         case 'forecast_24h':
-            await send_forecast_24h(query, data)
+            await send_24h_forecast(query, data)
 
     await state.finish()

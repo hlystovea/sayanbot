@@ -7,8 +7,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic.tools import parse_obj_as
 
 from logger import logger
-from schema.resort import Resort
-from schema.track import Track
+from schemes.resort import Resort
+from schemes.track import Track
 
 
 class MongoDB:

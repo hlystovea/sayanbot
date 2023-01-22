@@ -2,6 +2,7 @@ from aiogram import Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardMarkup
 
+from bot.common import MSG
 from bot.markups import get_main_keyboard, resort_cb
 
 
@@ -13,7 +14,7 @@ def register_main_handlers(dp: Dispatcher):
     )
     dp.register_message_handler(
         list_commands_button_handler,
-        text=['Показать список команд'],
+        text=[MSG.show_commands_list],
         state='*'
     )
     dp.register_callback_query_handler(
@@ -29,15 +30,11 @@ async def start_command_handler(message: Message, state: FSMContext):
     """
     await state.finish()
 
-    text = ('Привет! Я бот, который поможет тебе найти информацию '
-            'о горнолыжных курортах юга Сибири. Чтобы начать, нажмите '
-            '*"Показать список команд"*')
-
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.row('Показать список команд')
+    markup.row(MSG.show_commands_list)
 
     await message.answer(
-        text,
+        MSG.welcome_message,
         reply_markup=markup,
         parse_mode='Markdown',
         disable_notification=True
@@ -51,7 +48,7 @@ async def list_commands_button_handler(message: Message, state: FSMContext):
     await state.finish()
 
     await message.answer(
-        'Выберите команду:',
+        MSG.choose_command,
         reply_markup=get_main_keyboard(),
         disable_notification=True
     )
@@ -68,6 +65,6 @@ async def back_button_handler(
     await state.finish()
 
     await query.message.edit_text(
-        'Выберите команду:',
+        MSG.choose_command,
         reply_markup=get_main_keyboard()
     )
