@@ -60,5 +60,5 @@
 
 ## Поддержка
 Если у вас возникли сложности или вопросы по использованию проекта, создайте 
-[обсуждение](https://github.com/hlystovea/reservoirs_web/issues/new/choose) в данном репозитории или напишите в [Telegram](https://t.me/hlystovea).
+[обсуждение](https://github.com/hlystovea/sayanbot/issues/new/choose) в данном репозитории или напишите в [Telegram](https://t.me/hlystovea).
 
