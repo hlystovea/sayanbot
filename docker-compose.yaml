@@ -5,7 +5,7 @@ services:
     image: "${DOCKER_HUB}/sayanbot:latest"
     container_name: sayanbot_bot
     restart: unless-stopped
-    command: python3 bot.py
+    command: uv run bot.py
     env_file:
       - ./.env
 
