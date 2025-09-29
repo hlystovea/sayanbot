@@ -13,6 +13,6 @@ def register_exceptions_handlers(dp: Dispatcher):
 
 async def error_bot_blocked(update: Update, exception: BotBlocked):
     logger.error(
-        f'Bot was blocked by user with id {update.message.from_user.id}.'
+        'Bot was blocked by user with id %s', update.message.from_user.id
     )
     return True

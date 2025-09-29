@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from aiohttp import ClientError, ClientSession
 from pydantic import parse_obj_as
 
-from schemes.weather import Gismeteo, OpenWeather, Yandex
 from logger import logger
+from schemes.weather import Gismeteo, OpenWeather, Yandex
 
 GISMETEO_API_URL = 'https://api.gismeteo.net/v2/weather/'
 YANDEX_API_URL = 'https://api.weather.yandex.ru/v2/informers/'
@@ -79,12 +79,16 @@ class GismeteoWeatherProvider(WeatherProviderMixin):
         }
         return params | super().params(**kwargs)
 
-    async def current_weather(self, latitude: float, longitude: float) -> Gismeteo | None:  # noqa(E501)
+    async def current_weather(
+        self, latitude: float, longitude: float
+    ) -> Gismeteo | None:
         url = GISMETEO_API_URL + 'current/'
         data = await self.get_data(url, latitude, longitude)
         return Gismeteo(**data['response']) if data else None
 
-    async def forecast(self, latitude: float, longitude: float, days: int = 3) -> list[Gismeteo] | None:  # noqa(E501)
+    async def forecast(
+        self, latitude: float, longitude: float, days: int = 3
+    ) -> list[Gismeteo] | None:
         url = GISMETEO_API_URL + 'forecast/'
         data = await self.get_data(url, latitude, longitude, days=days)
         return parse_obj_as(list[Gismeteo], data['response']) if data else None
@@ -104,7 +108,9 @@ class YandexWeatherProvider(WeatherProviderMixin):
             'lon': longitude,
         }
 
-    async def current_weather(self, latitude: float, longitude: float) -> Yandex | None:  # noqa(E501)
+    async def current_weather(
+        self, latitude: float, longitude: float
+    ) -> Yandex | None:
         data = await self.get_data(YANDEX_API_URL, latitude, longitude)
         return Yandex(**data['fact']) if data else None
 
@@ -119,6 +125,8 @@ class OpenWeatherProvider(WeatherProviderMixin):
             'lon': longitude,
         }
 
-    async def current_weather(self, latitude: float, longitude: float) -> OpenWeather | None:  # noqa(E501)
+    async def current_weather(
+        self, latitude: float, longitude: float
+    ) -> OpenWeather | None:
         data = await self.get_data(OPENWEATHER_API_URL, latitude, longitude)
         return OpenWeather(**data) if data else None
