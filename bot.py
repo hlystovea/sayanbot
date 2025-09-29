@@ -12,7 +12,6 @@ from bot.handlers.main import register_main_handlers
 from bot.handlers.save_track import register_save_track_handlers
 from bot.handlers.weather import register_weather_handlers
 
-
 BOT_TOKEN = environ['BOT_TOKEN']
 
 storage = MongoStorage(
@@ -31,7 +30,7 @@ async def main():
     commands = [
         BotCommand(command='/start', description='начать'),
         BotCommand(command='/help', description='помощь'),
-        BotCommand(command='/menu', description='открыть меню')
+        BotCommand(command='/menu', description='открыть меню'),
     ]
     await bot.set_my_commands(commands)
 

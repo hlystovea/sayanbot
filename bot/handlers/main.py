@@ -8,19 +8,13 @@ from bot.markups import get_main_keyboard, resort_cb
 
 def register_main_handlers(dp: Dispatcher):
     dp.register_message_handler(
-        start_command_handler,
-        commands=['start', 'help'],
-        state='*'
+        start_command_handler, commands=['start', 'help'], state='*'
     )
     dp.register_message_handler(
-        list_commands_button_handler,
-        text=[MSG.show_commands_list],
-        state='*'
+        list_commands_button_handler, text=[MSG.show_commands_list], state='*'
     )
     dp.register_callback_query_handler(
-        back_button_handler,
-        resort_cb.filter(action='back'),
-        state='*'
+        back_button_handler, resort_cb.filter(action='back'), state='*'
     )
 
 
@@ -37,7 +31,7 @@ async def start_command_handler(message: Message, state: FSMContext):
         MSG.welcome_message,
         reply_markup=markup,
         parse_mode='Markdown',
-        disable_notification=True
+        disable_notification=True,
     )
 
 
@@ -50,14 +44,12 @@ async def list_commands_button_handler(message: Message, state: FSMContext):
     await message.answer(
         MSG.choose_command,
         reply_markup=get_main_keyboard(),
-        disable_notification=True
+        disable_notification=True,
     )
 
 
 async def back_button_handler(
-    query: CallbackQuery,
-    callback_data: dict[str, str],
-    state: FSMContext
+    query: CallbackQuery, callback_data: dict[str, str], state: FSMContext
 ):
     """
     This handler will be called when user sends callback with back action
@@ -65,6 +57,5 @@ async def back_button_handler(
     await state.finish()
 
     await query.message.edit_text(
-        MSG.choose_command,
-        reply_markup=get_main_keyboard()
+        MSG.choose_command, reply_markup=get_main_keyboard()
     )

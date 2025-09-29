@@ -20,31 +20,25 @@ class WeatherState(StatesGroup):
 
 def register_weather_handlers(dp: Dispatcher):
     dp.register_callback_query_handler(
-        entry_point,
-        main_cb.filter(action='weather'),
-        state='*'
+        entry_point, main_cb.filter(action='weather'), state='*'
     )
     dp.register_callback_query_handler(
-        weather_handler,
-        resort_cb.filter(action='weather'),
-        state='*'
+        weather_handler, resort_cb.filter(action='weather'), state='*'
     )
     dp.register_callback_query_handler(
         forecast_handler,
         weather_cb.filter(action='forecast'),
-        state=WeatherState.waiting_for_weather_action
+        state=WeatherState.waiting_for_weather_action,
     )
     dp.register_callback_query_handler(
         entry_point,
         weather_cb.filter(action='back'),
-        state=WeatherState.waiting_for_weather_action
+        state=WeatherState.waiting_for_weather_action,
     )
 
 
 async def entry_point(
-    query: CallbackQuery,
-    callback_data: dict[str, str],
-    state: FSMContext
+    query: CallbackQuery, callback_data: dict[str, str], state: FSMContext
 ):
     """
     This handler will be called first when the user
@@ -55,9 +49,7 @@ async def entry_point(
 
 
 async def weather_handler(
-    query: CallbackQuery,
-    callback_data: dict[str, str],
-    state: FSMContext
+    query: CallbackQuery, callback_data: dict[str, str], state: FSMContext
 ):
     """
     This handler will be called when user sends callback with `weather` action
@@ -99,7 +91,7 @@ async def send_current_weather(query: CallbackQuery, data: dict[str, Any]):
             data['resort'],
             current_weather.service,
             current_weather.url,
-            current_weather
+            current_weather,
         )
 
     except (AttributeError, KeyError, ValidationError) as error:
@@ -125,7 +117,7 @@ async def send_24h_forecast(query: CallbackQuery, data: dict[str, Any]):
             forecasts[12].service,
             forecasts[12].url,
             forecasts[12].date.strftime('%H:%M') if forecasts[12].date else '',
-            forecasts[12]
+            forecasts[12],
         )
 
     except (AttributeError, IndexError, KeyError) as error:
@@ -133,16 +125,12 @@ async def send_24h_forecast(query: CallbackQuery, data: dict[str, Any]):
         return await query.message.edit_text(MSG.error)
 
     await query.message.edit_text(
-        text,
-        parse_mode='Markdown',
-        disable_web_page_preview=True
+        text, parse_mode='Markdown', disable_web_page_preview=True
     )
 
 
 async def forecast_handler(
-    query: CallbackQuery,
-    callback_data: dict[str, str],
-    state: FSMContext
+    query: CallbackQuery, callback_data: dict[str, str], state: FSMContext
 ):
     """
     This handler will be called when the user sets
@@ -150,7 +138,7 @@ async def forecast_handler(
     """
     data = await state.get_data()
 
-    match callback_data['answer']:  # noqa(E999)
+    match callback_data['answer']:
         case 'current':
             await send_current_weather(query, data)
         case 'forecast_24h':

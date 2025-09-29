@@ -2,35 +2,33 @@ from aiogram import Dispatcher
 from aiogram.types import CallbackQuery
 
 from bot.common import MSG
-from bot.markups import (get_keyboard_with_resorts, get_keyboard_with_tracks,
-                         main_cb, resort_cb, track_cb)
+from bot.markups import (
+    get_keyboard_with_resorts,
+    get_keyboard_with_tracks,
+    main_cb,
+    resort_cb,
+    track_cb,
+)
 from db.mongo import mongo
 from logger import logger
 
 
 def register_get_track_handlers(dp: Dispatcher):
     dp.register_callback_query_handler(
-        entry_point,
-        main_cb.filter(action='tracks')
+        entry_point, main_cb.filter(action='tracks')
     )
     dp.register_callback_query_handler(
-        region_choice_handler,
-        resort_cb.filter(action='tracks')
+        region_choice_handler, resort_cb.filter(action='tracks')
     )
     dp.register_callback_query_handler(
-        track_choice_handler,
-        track_cb.filter(action='tracks')
+        track_choice_handler, track_cb.filter(action='tracks')
     )
     dp.register_callback_query_handler(
-        entry_point,
-        track_cb.filter(action='back')
+        entry_point, track_cb.filter(action='back')
     )
 
 
-async def entry_point(
-    query: CallbackQuery,
-    callback_data: dict[str, str]
-):
+async def entry_point(query: CallbackQuery, callback_data: dict[str, str]):
     """
     This handler will be called first when the user sends
     callback with tracks action
@@ -45,13 +43,12 @@ async def entry_point(
 
     await query.message.edit_text(
         MSG.choose_track_region,
-        reply_markup=get_keyboard_with_resorts('tracks', resorts)
+        reply_markup=get_keyboard_with_resorts('tracks', resorts),
     )
 
 
 async def region_choice_handler(
-    query: CallbackQuery,
-    callback_data: dict[str, str]
+    query: CallbackQuery, callback_data: dict[str, str]
 ):
     """
     This handler will be called when user sends resort callback
@@ -64,14 +61,12 @@ async def region_choice_handler(
     )
 
     await query.message.edit_text(
-        MSG.choose_track,
-        reply_markup=get_keyboard_with_tracks(tracks)
+        MSG.choose_track, reply_markup=get_keyboard_with_tracks(tracks)
     )
 
 
 async def track_choice_handler(
-    query: CallbackQuery,
-    callback_data: dict[str, str]
+    query: CallbackQuery, callback_data: dict[str, str]
 ):
     """
     This handler will be called when user sends track callback
@@ -91,6 +86,6 @@ async def track_choice_handler(
         track.file_id,
         caption=f'*{track.name}:*\n{track.description}',
         disable_notification=True,
-        parse_mode='Markdown'
+        parse_mode='Markdown',
     )
     await query.message.delete()
