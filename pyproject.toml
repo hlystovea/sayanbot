@@ -19,7 +19,7 @@ dependencies = [
     "magic-filter==1.0.9 ; python_full_version >= '3.7' and python_full_version < '4'",
     "motor==3.1.1",
     "multidict==6.7.0 ; python_full_version >= '3.7'",
-    "pydantic==1.10.4",
+    "pydantic==2.11.10",
     "pymongo==4.3.3 ; python_full_version >= '3.7'",
     "python-dotenv==0.21.1",
     "python-jsonrpc-server==0.4.0",
