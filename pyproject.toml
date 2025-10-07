@@ -20,7 +20,7 @@ dependencies = [
     "motor==3.1.1",
     "multidict==6.7.0 ; python_full_version >= '3.7'",
     "pydantic==1.10.4",
-    "pymongo==4.3.3 ; python_full_version >= '3.7'",
+    "pymongo==4.15.2 ; python_full_version >= '3.7'",
     "python-dotenv==0.21.1",
     "python-jsonrpc-server==0.4.0",
     "pytz==2022.7.1",
