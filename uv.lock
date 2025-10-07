@@ -94,11 +94,11 @@ wheels = [
 
 [[package]]
 name = "certifi"
-version = "2022.12.7"
+version = "2025.10.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/37/f7/2b1b0ec44fdc30a3d31dfebe52226be9ddc40cd6c0f34ffc8923ba423b69/certifi-2022.12.7.tar.gz", hash = "sha256:35824b4c3a97115964b408844d64aa14db1cc518f6562e8d7261699d1350a9e3", size = 156897, upload-time = "2022-12-07T20:13:22.081Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/5b/b6ce21586237c77ce67d01dc5507039d444b630dd76611bbca2d8e5dcd91/certifi-2025.10.5.tar.gz", hash = "sha256:47c09d31ccf2acf0be3f701ea53595ee7e0b8fa08801c6624be771df09ae7b43", size = 164519, upload-time = "2025-10-05T04:12:15.808Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/71/4c/3db2b8021bd6f2f0ceb0e088d6b2d49147671f25832fb17970e9b583d742/certifi-2022.12.7-py3-none-any.whl", hash = "sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18", size = 155255, upload-time = "2022-12-07T20:13:19.428Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/37/af0d2ef3967ac0d6113837b44a4f0bfe1328c2b9763bd5b1744520e5cfed/certifi-2025.10.5-py3-none-any.whl", hash = "sha256:0f212c2744a9bb6de0c56639a6f68afe01ecd92d91f14ae897c4fe7bbeeef0de", size = 163286, upload-time = "2025-10-05T04:12:14.03Z" },
 ]
 
 [[package]]
@@ -426,7 +426,7 @@ requires-dist = [
     { name = "async-timeout", marker = "python_full_version >= '3.6'", specifier = "==4.0.2" },
     { name = "attrs", marker = "python_full_version >= '3.6'", specifier = "==22.2.0" },
     { name = "babel", marker = "python_full_version >= '2.7'", specifier = "==2.9.1" },
-    { name = "certifi", marker = "python_full_version >= '3.6'", specifier = "==2022.12.7" },
+    { name = "certifi", marker = "python_full_version >= '3.6'", specifier = "==2025.10.5" },
     { name = "charset-normalizer", marker = "python_full_version >= '3.6'", specifier = "==2.1.1" },
     { name = "dnspython", marker = "python_full_version >= '3.7' and python_full_version < '4'", specifier = "==2.3.0" },
     { name = "frozenlist", marker = "python_full_version >= '3.7'", specifier = "==1.3.3" },
